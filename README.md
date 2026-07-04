@@ -2,7 +2,7 @@
 
 Piattaforma per esplorare visivamente le relazioni storiche tra i documenti RFC dell'IETF (Internet Engineering Task Force) — in particolare i legami *Updates* e *Obsoletes* — tramite un grafo interattivo.
 
-Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'università RomaTre.
+Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'università Roma Tre.
 
 ## Stato del progetto
 
