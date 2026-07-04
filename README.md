@@ -6,11 +6,11 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 
 ## Stato del progetto
 
-🚧 **In sviluppo.** Al momento questo repository contiene solo la pipeline dati (backend Python), i comandi di test e la documentazione tecnica. Il frontend (Angular + D3.js) esiste in locale ma non è ancora stato aggiunto al repository.
+🚧 **In sviluppo.** Al momento questo repository contiene solo la pipeline dati (backend Python), i comandi di test e la documentazione tecnica. Il frontend (Angular + D3.js) non è ancora stato aggiunto al repository.
 
 ## Architettura usata
 
-Il progetto è diviso in due componenti indipendenti, collegate da un solo contratto: un file JSON.
+Il progetto è diviso in due componenti indipendenti, collegate da un solo contratto: il file graph_data_enriched.json.
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────┐
