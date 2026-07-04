@@ -53,7 +53,7 @@ Il disegno effettivo avviene su `<canvas>` con l'API 2D nativa del browser, pilo
 
 ---
 
-## 2. Struttura del JSON enriched— ogni campo nel dettaglio
+## 2. Struttura del JSON enriched — ogni campo nel dettaglio
 
 Il file prodotto (`graph_data_enriched.json`, `schema_version: "1.2"`) ha tre blocchi: `meta`, `nodes`, `edges`.
 
