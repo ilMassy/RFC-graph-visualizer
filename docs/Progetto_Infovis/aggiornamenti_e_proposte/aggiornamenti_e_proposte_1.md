@@ -15,9 +15,9 @@
 7. [Come viene calcolato l'impact score (PageRank pesato)](#7-come-viene-calcolato-limpact-score-pagerank-pesato)
 8. [Proposta: includere TUTTI i nodi nel grafo](#8-proposta-includere-tutti-i-nodi-nel-grafo-anche-draft-e-aborted)
 9. [Barra temporale e posizionamento per anno](#9-barra-temporale-e-posizionamento-per-anno)
-10. [Abstract e keywords nel pannello di dettaglio](#11-abstract-e-keywords-nel-pannello-di-dettaglio)
-11. [Come si intende strutturare il grafo, in sintesi](#12-come-si-intende-strutturare-il-grafo-in-sintesi)
-12. [Aggiornamento automatico di `graph_data_enriched.json`](#13-aggiornamento-automatico-di-graph_data_enrichedjson)
+10. [Abstract e keywords nel pannello di dettaglio](#10-abstract-e-keywords-nel-pannello-di-dettaglio)
+11. [Come si intende strutturare il grafo, in sintesi](#11-come-si-intende-strutturare-il-grafo-in-sintesi)
+12. [Aggiornamento automatico di `graph_data_enriched.json`](#12-aggiornamento-automatico-di-graph_data_enrichedjson)
 
 ---
 
