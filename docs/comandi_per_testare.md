@@ -11,7 +11,7 @@ source venv/bin/activate
 
 ## 1. Test veloce su dati campione (`sample_rfc_index.xml`)
 
-Usa il file XML di esempio invece di quello reale (44.000+ entry) per iterare rapidamente senza aspettare il download/parsing completo:
+Usa un file XML di esempio invece di quello reale (44.000+ entry) per iterare rapidamente senza aspettare il download/parsing completo:
 
 ```bash
 python rfc_pipeline.py parse sample_rfc_index.xml -o output/graph_data_test.json --state-file .state/parser_state_test.json
