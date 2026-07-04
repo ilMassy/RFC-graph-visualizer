@@ -45,10 +45,10 @@ INFOVIS/
 ├── backend/
 │   └── rfc_pipeline.py                          # Pipeline dati: parsing rfc-index.xml + arricchimento via IETF Datatracker (unico script, due sotto-comandi: parse, enrich)
 ├── docs/
-│   ├── comandi_per_testare.md                   # Comandi di test per gli script della pipeline (fase di parsing)
-│   └── Progetto_Infovis/
-│       └── aggiornamenti_e_proposte/
-│           └── aggiornamenti_e_proposte_1.md    # Aggiornamenti sullo stato del progetto e proposte sul design del grafo (versione 1)
+│   ├── Progetto_Infovis/
+│   │    └── aggiornamenti_e_proposte/
+│   │       └── aggiornamenti_e_proposte_1.md    # Aggiornamenti sullo stato del progetto e proposte sul design del grafo (versione 1)
+│   └── comandi_per_testare.md                   # Comandi di test per gli script della pipeline (fase di parsing)
 ├── .gitignore                                   # Regole di esclusione: cache/stato pipeline, output JSON generati, ambiente Python, Angular (in previsione)
 ├── README.md                                    # Questo file
 └── requirements.txt                             # Dipendenze Python (nessuna esterna: solo libreria standard)
