@@ -207,6 +207,7 @@ Mettendo insieme le proposte precedenti, la visione complessiva del frontend è:
 - **Archi differenziati per colore e spessore**, con direzione indicata da una freccia.
 - **Interazione**: la Progressive Disclosure (Core Backbone iniziale + espansione al click) è il modello di navigazione principale e "Core Backbone" può includere, oltre al top-N per impact score, un criterio temporale (es. mostrare sempre i documenti dell'anno corrente e di quello precedente, anche se a basso impact score, per dare visibilità all'attività IETF più recente) — questa è un'estensione che vale la pena valutare insieme, non ancora decisa.
 - **Pannello di dettaglio arricchito** con abstract e keywords (punto 10), oltre ai campi già previsti.
+- **Scelta cromatica**: la palette sarà definita secondo criteri di accessibilità universale, garantendo una chiara leggibilità per gli utenti affetti da daltonismo.
 
 ---
 
