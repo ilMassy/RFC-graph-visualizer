@@ -14,17 +14,17 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────┐
-│   BACKEND (Python)   │         │    FRONTEND (Angular)    │
-│                      │         │                          │
-│  rfc_pipeline.py     │  JSON   │  GraphDataService        │
-│   ├─ parse   ────────┼────────▶│   (carica, indicizza,    │
-│   └─ enrich          │  file   │    gestisce il subset    │
-│                      │ statico │    visibile)             │
-│  Fonti esterne:      │         │                          │
-│  - rfc-editor.org    │         │  GraphCanvasComponent    │
-│    (rfc-index.xml)   │         │   (D3.js su <canvas>:    │
-│  - datatracker.ietf  │         │    force simulation,     │
-│    .org (REST API)   │         │    zoom/pan, rendering)  │
+│   BACKEND (Python)  │         │    FRONTEND (Angular)    │
+│                     │         │                          │
+│  rfc_pipeline.py    │  JSON   │  GraphDataService        │
+│   ├─ parse   ───────┼────────▶│   (carica, indicizza,    │
+│   └─ enrich         │  file   │    gestisce il subset    │
+│                     │ statico │    visibile)             │
+│  Fonti esterne:     │         │                          │
+│  - rfc-editor.org   │         │  GraphCanvasComponent    │
+│    (rfc-index.xml)  │         │   (D3.js su <canvas>:    │
+│  - datatracker.ietf │         │    force simulation,     │
+│    .org (REST API)  │         │    zoom/pan, rendering)  │
 └─────────────────────┘         └──────────────────────────┘
 ```
 
