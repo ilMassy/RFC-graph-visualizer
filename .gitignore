@@ -14,7 +14,7 @@ graph_data.json
 graph_data_enriched.json
 graph_data_prova.json
 
-# Angular (quando lo aggiungeremo)
+# Angular 
 node_modules/
 dist/
 .angular/
