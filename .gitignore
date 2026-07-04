@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+backend/venv/
+
+# Stato/cache della pipeline (rigenerabili, non vanno versionati)
+.cache/
+.state/
+
+# Output pesanti generati dalla pipeline
+graph_data.json
+graph_data_enriched.json
+graph_data_prova.json
+
+# Angular (quando lo aggiungeremo)
+node_modules/
+dist/
+.angular/
+
+# Dato scaricato, rigenerabile via download (non versionare, può essere pesante)
+backend/rfc-index.xml
+
+# Metadati locali dell'editor Obsidian (non fanno parte del contenuto del progetto)
+docs/Progetto_Infovis/.obsidian/
