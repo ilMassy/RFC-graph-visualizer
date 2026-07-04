@@ -41,7 +41,7 @@ Il disegno effettivo avviene su `<canvas>` con l'API 2D nativa del browser, pilo
 ## Struttura del repository
 
 ```
-INFOVIS/
+RFC-graph-visualizer/
 ├── backend/
 │   └── rfc_pipeline.py                          # Pipeline dati: parsing rfc-index.xml + arricchimento via IETF Datatracker (unico script, due sotto-comandi: parse, enrich)
 ├── docs/
