@@ -3,7 +3,7 @@
 Riferimento rapido per testare `backend/rfc_pipeline.py` senza dover ricordare a memoria le opzioni. Da eseguire dentro `backend/`, con il virtualenv attivo:
 
 ```bash
-cd ~/Scrivania/INFOVIS/backend
+cd percorso_cartella_backend
 source venv/bin/activate
 ```
 
