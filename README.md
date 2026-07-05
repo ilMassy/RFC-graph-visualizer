@@ -28,9 +28,9 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 └─────────────────────┘         └──────────────────────────┘
 ```
 
-**Python** è usato solo lato backend, come pipeline batch/offline: non serve nulla in tempo reale, il suo unico compito è produrre `graph_data_enriched.json` combinando due fonti auto>
+**Python** è usato solo lato backend, come pipeline batch/offline: non serve nulla in tempo reale, il suo unico compito è produrre `graph_data_enriched.json` combinando due fonti autorevoli (l'indice ufficiale RFC e l'API IETF Datatracker). Non espone un'API HTTP: il collegamento col frontend è il file JSON stesso.
 
-**Angular** è il framework scelto per il frontend per la sua gestione nativa di stato reattivo (Signals) e componenti standalone, che si adatta bene alla separazione netta richiesta t>
+**Angular** è il framework scelto per il frontend per la sua gestione nativa di stato reattivo (Signals) e componenti standalone, che si adatta bene alla separazione netta richiesta tra "chi decide cosa mostrare" (`GraphDataService`) e "chi disegna" (`GraphCanvasComponent`) — nessuno dei due deve conoscere i dettagli implementativi dell'altro.
 
 **D3.js** non viene usato per il rendering DOM/SVG (che con migliaia di elementi degraderebbe le prestazioni), ma solo per due sotto-sistemi:
 - il motore di **force simulation** (calcolo iterativo delle posizioni x/y di ogni nodo in base alle forze — repulsione, collisione, attrazione lungo gli archi);
