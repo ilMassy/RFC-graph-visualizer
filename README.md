@@ -68,7 +68,7 @@ I comandi di test dettagliati sono in [`docs/comandi_per_testare.md`](docs/coman
 - **RFC Editor** — [rfc-editor.org](https://www.rfc-editor.org/), fonte dell'indice ufficiale `rfc-index.xml` usato in fase di parsing.
 - **IETF Datatracker** — [datatracker.ietf.org](https://datatracker.ietf.org/), fonte autorevole per layer di rete, working group e Internet-Draft; API pubblica documentata su [datatracker.ietf.org/api/v1](https://datatracker.ietf.org/api/v1/).
 - **IETF** — [ietf.org](https://www.ietf.org/), organizzazione responsabile dello sviluppo degli standard Internet documentati come RFC.
-- **Brin, S., Page, L. (1998)** — [The Anatomy of a Large-Scale Hypertextual Web Search Engine](https://infolab.stanford.edu/~backrub/google.html), paper di riferimento per l'algoritmo PageRank originale, adattato nella nostra implementazione come variante pesata per il calcolo dell' `impact_score` dei nodi RFC.
+- **Brin, S., Page, L. (1998)** — [The Anatomy of a Large-Scale Hypertextual Web Search Engine (Archived)](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html), paper di riferimento per l'algoritmo PageRank originale, adattato come variante pesata per il calcolo dell' `impact_score` dei nodi RFC.
 - **D3.js** — [d3js.org](https://d3js.org/), libreria usata (prevista) per il layout a forze e il rendering del grafo nel frontend.
 - **Angular** — [angular.dev](https://angular.dev/), framework usato (previsto) per il frontend.
 
