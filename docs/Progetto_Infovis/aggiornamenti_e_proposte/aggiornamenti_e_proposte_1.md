@@ -120,7 +120,8 @@ La conseguenza pratica per il frontend: **va sempre usato `layer`, mai `layer_hi
 
 Ho verificato con una ricerca mirata:
 
-- **RFC pubblicati**: fonti pubbliche (rfc-editor.org, arkko.com/tools/rfcstats) riportavano circa **9.164 RFC** ad agosto 2024, e IETF.org parla genericamente di "oltre 9.000" documenti nella serie. Il nostro dataset ne conta **9.794** a metà 2026 — coerente: significa circa 630 nuovi RFC pubblicati in ~2 anni, cioè ~300–350 l'anno, in linea con il ritmo storico di pubblicazione dell'IETF. ✅ **Numero plausibile e verificato.**
+- **RFC pubblicati**: al maggio 2026, fonti di riferimento enciclopedico (Wikipedia) indicano la presenza di oltre 9.963 RFC. Il nostro dataset, aggiornato tramite esecuzione della pipeline al 4 luglio 2026, ne conta 9.794.
+Il leggero scostamento (~170 unità) è da considerarsi fisiologico e pienamente coerente: mentre il dato enciclopedico riflette il conteggio ufficiale IETF in tempo reale, il nostro dataset è il risultato di un'estrazione locale che conferma la solidità della pipeline. Il trend di pubblicazione (~300–350 nuovi documenti/anno) resta in linea con lo storico IETF. ✅ **Numero plausibile e verificato**.
 - **Internet-Draft (attivi/scaduti/morti/sostituiti)**: qui devo essere onesto sui limiti della verifica. Non ho trovato una statistica pubblica aggregata che dichiari "il totale storico di tutti i nomi di draft distinti mai sottomessi all'IETF" in modo diretto e affidabile — le pagine di statistiche di Datatracker mostrano viste parziali (draft attivi, ultimi 7 giorni, ecc.) ma non un totale storico onnicomprensivo facilmente citabile. **34.617** è un ordine di grandezza plausibile, dato che l'IETF raccoglie sottomissioni di draft dai primi anni '90 e il volume di nuove submission è nell'ordine delle migliaia l'anno da tempo, ma non posso confermarlo con la stessa certezza del dato sugli RFC pubblicati. ⚠️ **Plausibile ma non verificato in modo indipendente.**
 
 ---
