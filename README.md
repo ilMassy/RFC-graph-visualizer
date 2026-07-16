@@ -43,19 +43,43 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 
 Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggiorna ad ogni "tick" della simulazione o ad ogni interazione di zoom/pan.
 
-```
 ## Struttura del repository
+
+```
 RFC-graph-visualizer/
 ├── backend/
 │   ├── rfc_pipeline.py                          # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (due sotto-comandi: parse, enrich)
-│   └── draft_metadata_enricher.py               # Secondo passaggio, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
+│   ├── draft_metadata_enricher.py               # Secondo passaggio, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
+│   └── sample_rfc_index.xml                     # Indice RFC di esempio, ridotto, per test rapidi della fase `parse` senza scaricare il dataset reale
 ├── docs/
 │   ├── comandi_per_testare.md                   # Comandi di test per entrambi gli script della pipeline (parsing, enrichment, draft metadata) e per l'avvio del frontend
 │   └── Progetto_Infovis/
 │       └── aggiornamenti_e_proposte/
 │           ├── aggiornamenti_e_proposte_1.md    # Aggiornamenti sullo stato del progetto e proposte sul design del grafo (versione 1)
 │           └── aggiornamenti_e_proposte_2.md    # Aggiornamenti: frontend Angular implementato, nuovo script di enrichment draft, proposta sull'automazione della pipeline (versione 2)
-├── .gitignore                                   # Regole di esclusione: cache/stato pipeline, output JSON generati, ambiente Python, Angular (in previsione)
+├── infovis/                                      # Frontend Angular standalone
+│   ├── angular.json
+│   ├── package.json
+│   ├── package-lock.json
+│   ├── tsconfig.json / tsconfig.app.json / tsconfig.spec.json
+│   ├── public/
+│   │   └── favicon.ico
+│   └── src/
+│       ├── app/
+│       │   ├── app.ts / app.html / app.scss / app.config.ts
+│       │   ├── components/
+│       │   │   ├── landing-menu/          # Menu iniziale: scelta tra le due viste
+│       │   │   ├── graph-canvas/          # Grafo 3D degli RFC pubblicati (D3 + force simulation)
+│       │   │   └── draft-timeline/        # Istogramma temporale per draft/aborted (canvas 2D + d3-zoom)
+│       │   ├── models/
+│       │   │   └── graph.model.ts         # Interfacce dati condivise (nodi, archi, tipi RFC)
+│       │   └── services/
+│       │       ├── graph-data.service.ts              # Dati per la vista a grafo (solo RFC pubblicati)
+│       │       └── draft-timeline-data.service.ts      # Dati per la vista timeline (solo draft/aborted)
+│       ├── index.html
+│       ├── main.ts
+│       └── styles.scss
+├── .gitignore                                   # Regole di esclusione: cache/stato pipeline, output JSON generati, ambiente Python, Angular
 ├── README.md                                    # Questo file
 └── requirements.txt                             # Dipendenze Python (nessuna esterna: solo libreria standard)
 ```
