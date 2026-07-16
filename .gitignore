@@ -21,6 +21,3 @@ dist/
 
 # Dato scaricato, rigenerabile via download (non versionare, può essere pesante)
 backend/rfc-index.xml
-
-# Metadati locali dell'editor Obsidian (non fanno parte del contenuto del progetto)
-docs/Progetto_Infovis/.obsidian/
