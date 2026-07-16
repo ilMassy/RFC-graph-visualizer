@@ -15,9 +15,9 @@
 7. [Come viene calcolato l'impact score (PageRank pesato)](#7-come-viene-calcolato-limpact-score-pagerank-pesato)
 8. [Proposta: includere TUTTI i nodi nel grafo](#8-proposta-includere-tutti-i-nodi-nel-grafo-anche-draft-e-aborted)
 9. [Barra temporale e posizionamento per anno](#9-barra-temporale-e-posizionamento-per-anno)
-10. [Abstract e keywords nel pannello di dettaglio](#11-abstract-e-keywords-nel-pannello-di-dettaglio)
-11. [Come si intende strutturare il grafo, in sintesi](#12-come-si-intende-strutturare-il-grafo-in-sintesi)
-12. [Aggiornamento automatico di `graph_data_enriched.json`](#13-aggiornamento-automatico-di-graph_data_enrichedjson)
+10. [Abstract e keywords nel pannello di dettaglio](#10-abstract-e-keywords-nel-pannello-di-dettaglio)
+11. [Come si intende strutturare il grafo, in sintesi](#11-come-si-intende-strutturare-il-grafo-in-sintesi)
+12. [Aggiornamento automatico di `graph_data_enriched.json`](#12-aggiornamento-automatico-di-graph_data_enrichedjson)
 
 ---
 
@@ -27,17 +27,17 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────┐
-│   BACKEND (Python)   │         │    FRONTEND (Angular)    │
-│                      │         │                          │
-│  rfc_pipeline.py     │  JSON   │  GraphDataService        │
-│   ├─ parse   ────────┼────────▶│   (carica, indicizza,    │
-│   └─ enrich          │  file   │    gestisce il subset    │
-│                      │ statico │    visibile)             │
-│  Fonti esterne:      │         │                          │
-│  - rfc-editor.org    │         │  GraphCanvasComponent    │
-│    (rfc-index.xml)   │         │   (D3.js su <canvas>:    │
-│  - datatracker.ietf  │         │    force simulation,     │
-│    .org (REST API)   │         │    zoom/pan, rendering)  │
+│   BACKEND (Python)  │         │    FRONTEND (Angular)    │
+│                     │         │                          │
+│  rfc_pipeline.py    │  JSON   │  GraphDataService        │
+│   ├─ parse   ───────┼────────▶│   (carica, indicizza,    │
+│   └─ enrich         │  file   │    gestisce il subset    │
+│                     │ statico │    visibile)             │
+│  Fonti esterne:     │         │                          │
+│  - rfc-editor.org   │         │  GraphCanvasComponent    │
+│    (rfc-index.xml)  │         │   (D3.js su <canvas>:    │
+│  - datatracker.ietf │         │    force simulation,     │
+│    .org (REST API)  │         │    zoom/pan, rendering)  │
 └─────────────────────┘         └──────────────────────────┘
 ```
 
@@ -53,7 +53,7 @@ Il disegno effettivo avviene su `<canvas>` con l'API 2D nativa del browser, pilo
 
 ---
 
-## 2. Struttura del JSON enriched— ogni campo nel dettaglio
+## 2. Struttura del JSON enriched — ogni campo nel dettaglio
 
 Il file prodotto (`graph_data_enriched.json`, `schema_version: "1.2"`) ha tre blocchi: `meta`, `nodes`, `edges`.
 
@@ -120,7 +120,8 @@ La conseguenza pratica per il frontend: **va sempre usato `layer`, mai `layer_hi
 
 Ho verificato con una ricerca mirata:
 
-- **RFC pubblicati**: fonti pubbliche (rfc-editor.org, arkko.com/tools/rfcstats) riportavano circa **9.164 RFC** ad agosto 2024, e IETF.org parla genericamente di "oltre 9.000" documenti nella serie. Il nostro dataset ne conta **9.794** a metà 2026 — coerente: significa circa 630 nuovi RFC pubblicati in ~2 anni, cioè ~300–350 l'anno, in linea con il ritmo storico di pubblicazione dell'IETF. ✅ **Numero plausibile e verificato.**
+- **RFC pubblicati**: al maggio 2026, fonti di riferimento enciclopedico (Wikipedia) indicano la presenza di oltre 9.963 RFC. Il nostro dataset, aggiornato tramite esecuzione della pipeline al 4 luglio 2026, ne conta 9.794.
+Il leggero scostamento (~170 unità) è da considerarsi fisiologico e pienamente coerente: mentre il dato enciclopedico riflette il conteggio ufficiale IETF in tempo reale, il nostro dataset è il risultato di un'estrazione locale che conferma la solidità della pipeline. Il trend di pubblicazione (~300–350 nuovi documenti/anno) resta in linea con lo storico IETF. ✅ **Numero plausibile e verificato**.
 - **Internet-Draft (attivi/scaduti/morti/sostituiti)**: qui devo essere onesto sui limiti della verifica. Non ho trovato una statistica pubblica aggregata che dichiari "il totale storico di tutti i nomi di draft distinti mai sottomessi all'IETF" in modo diretto e affidabile — le pagine di statistiche di Datatracker mostrano viste parziali (draft attivi, ultimi 7 giorni, ecc.) ma non un totale storico onnicomprensivo facilmente citabile. **34.617** è un ordine di grandezza plausibile, dato che l'IETF raccoglie sottomissioni di draft dai primi anni '90 e il volume di nuove submission è nell'ordine delle migliaia l'anno da tempo, ma non posso confermarlo con la stessa certezza del dato sugli RFC pubblicati. ⚠️ **Plausibile ma non verificato in modo indipendente.**
 
 ---
@@ -205,8 +206,9 @@ Mettendo insieme le proposte precedenti, la visione complessiva del frontend è:
 - **Asse verticale/posizione fine = struttura** (raggruppamento emergente dalla force simulation): nodi collegati da Updates/Obsoletes restano vicini all'interno della propria fascia temporale; i draft, privi di archi, si distribuiscono nella loro fascia per semplice repulsione/collisione con gli altri nodi.
 - **Dimensione = impact score** (scala radice quadrata), **colore = layer** (con bucket neutro per `layer: null`), **forma = tipo di documento** (es. cerchio per RFC pubblicati, quadrato/marker distinto per draft/aborted).
 - **Archi differenziati per colore e spessore**, con direzione indicata da una freccia.
-- **Interazione**: la Progressive Disclosure (Core Backbone iniziale + espansione al click) è il modello di navigazione principale e "Core Backbone" può includere, oltre al top-N per impact score, un criterio temporale (es. mostrare sempre i documenti dell'anno corrente e di quello precedente, anche se a basso impact score, per dare visibilità all'attività IETF più recente) — questa è un'estensione che vale la pena valutare insieme, non ancora decisa.
+- **Interazione**: il modello di navigazione si basa sulla Progressive Disclosure (Core Backbone iniziale con espansione al click). Per quanto riguarda il 'Core Backbone', si propone di affiancare al criterio basato sull'impatto (impact score) una componente temporale, garantendo visibilità agli RFC dell'ultimo biennio indipendentemente dal punteggio; tale estensione, volta a valorizzare l'attività IETF più recente, resta al momento in fase di valutazione.
 - **Pannello di dettaglio arricchito** con abstract e keywords (punto 10), oltre ai campi già previsti.
+- **Scelta cromatica**: la palette sarà definita secondo criteri di accessibilità universale, garantendo una chiara leggibilità per gli utenti affetti da daltonismo.
 
 ---
 

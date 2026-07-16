@@ -2,7 +2,7 @@
 
 Piattaforma per esplorare visivamente le relazioni storiche tra i documenti RFC dell'IETF (Internet Engineering Task Force) — in particolare i legami *Updates* e *Obsoletes* — tramite un grafo interattivo.
 
-Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'università RomaTre.
+Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'università Roma Tre.
 
 ## Stato del progetto
 
@@ -10,9 +10,7 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 
 ## Architettura usata
 
-Il progetto è diviso in due componenti indipendenti, collegate da un solo contratto: un file JSON.
-
-```
+Il progetto è diviso in due componenti indipendenti, collegate da un solo contratto: il file graph_data_enriched.json.
 ┌─────────────────────┐         ┌──────────────────────────┐
 │   BACKEND (Python)   │         │    FRONTEND (Angular)    │
 │                      │         │                          │
@@ -31,7 +29,6 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 │  - datatracker.ietf  │         │   (istogramma temporale, │
 │    .org (REST API)   │         │    solo draft/aborted)   │
 └─────────────────────┘         └──────────────────────────┘
-```
 
 **Python** è usato solo lato backend, come pipeline batch/offline: non serve nulla in tempo reale, il suo compito è produrre `graph_data_enriched.json` combinando due fonti autorevoli (l'indice ufficiale RFC e l'API IETF Datatracker), poi completato da un secondo script che risolve i campi ancora mancanti sui soli documenti draft/aborted.
 
@@ -44,9 +41,7 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggiorna ad ogni "tick" della simulazione o ad ogni interazione di zoom/pan.
 
 ## Struttura del repository
-
-```
-INFOVIS/
+RFC-graph-visualizer/
 ├── backend/
 │   ├── rfc_pipeline.py                          # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (due sotto-comandi: parse, enrich)
 │   └── draft_metadata_enricher.py               # Secondo passaggio, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
@@ -59,7 +54,6 @@ INFOVIS/
 ├── .gitignore                                   # Regole di esclusione: cache/stato pipeline, output JSON generati, ambiente Python, Angular (in previsione)
 ├── README.md                                    # Questo file
 └── requirements.txt                             # Dipendenze Python (nessuna esterna: solo libreria standard)
-```
 
 ### `backend/rfc_pipeline.py`
 
@@ -85,7 +79,7 @@ I comandi di test dettagliati per entrambi gli script, oltre ai comandi per l'av
 - **RFC Editor** — [rfc-editor.org](https://www.rfc-editor.org/), fonte dell'indice ufficiale `rfc-index.xml` usato in fase di parsing.
 - **IETF Datatracker** — [datatracker.ietf.org](https://datatracker.ietf.org/), fonte autorevole per layer di rete, working group, Internet-Draft e per la data di ultima revisione dei draft; API pubblica documentata su [datatracker.ietf.org/api/v1](https://datatracker.ietf.org/api/v1/).
 - **IETF** — [ietf.org](https://www.ietf.org/), organizzazione responsabile dello sviluppo degli standard Internet documentati come RFC.
-- Brin, S., Page, L. — *The Anatomy of a Large-Scale Hypertextual Web Search Engine* (1998) — algoritmo PageRank originale, alla base della variante pesata usata per calcolare `impact_score`.
+- **Brin, S., Page, L. (1998)** — [The Anatomy of a Large-Scale Hypertextual Web Search Engine (Archived)](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html), paper di riferimento per l'algoritmo PageRank originale, adattato come variante pesata per il calcolo dell'`impact_score` dei nodi RFC.
 - **D3.js** — [d3js.org](https://d3js.org/), libreria usata nel frontend (implementato in locale, non ancora nel repository) per la force simulation 3D e la gestione di zoom/pan.
 - **Angular** — [angular.dev](https://angular.dev/), framework usato per il frontend (implementato in locale, non ancora nel repository).
 

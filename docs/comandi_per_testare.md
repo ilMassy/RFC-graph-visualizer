@@ -3,33 +3,13 @@
 Riferimento rapido per testare `backend/rfc_pipeline.py` senza dover ricordare a memoria le opzioni. Da eseguire dentro `backend/`, con il virtualenv attivo:
 
 ```bash
-cd ~/Scrivania/INFOVIS/backend
+cd percorso_cartella_backend
 source venv/bin/activate
 ```
 
 ---
 
-## 1. Test veloce su dati campione (`sample_rfc_index.xml`)
-
-Usa il file XML di esempio invece di quello reale (44.000+ entry) per iterare rapidamente senza aspettare il download/parsing completo:
-
-```bash
-python rfc_pipeline.py parse sample_rfc_index.xml -o output/graph_data_test.json --state-file .state/parser_state_test.json
-```
-
-Controlla l'output:
-
-```bash
-python -c "
-import json
-data = json.load(open('output/graph_data_test.json'))
-print('Nodi:', len(data['nodes']))
-print('Archi:', len(data['edges']))
-print(json.dumps(data['nodes'][0], indent=2))
-"
-```
-
-## 2. Fase `parse` — indice reale completo
+## 1. Fase `parse` — indice reale completo
 
 Scarica (se necessario) `rfc-index.xml` e produce `graph_data.json`:
 
@@ -49,7 +29,7 @@ Forza un nuovo parsing completo ignorando lo stato salvato (utile dopo aver modi
 python rfc_pipeline.py parse rfc-index.xml -o output/graph_data.json --force
 ```
 
-## 3. Fase `enrich` — arricchimento via Datatracker
+## 2. Fase `enrich` — arricchimento via Datatracker
 
 ⚠️ Interroga l'API pubblica di Datatracker: con il dataset reale (~10.000 RFC) ci vuole tempo per via del rate limiting (0.5s per richiesta). Per un primo test, usa `--skip-drafts` per saltare il fetch dei 34.000+ Internet-Draft e limitarti solo agli RFC pubblicati:
 
@@ -81,13 +61,13 @@ Riparti da zero ignorando `enriched_ids` (ri-arricchisce tutto, anche ciò che e
 python rfc_pipeline.py enrich --input output/graph_data.json --output output/graph_data_enriched.json --force
 ```
 
-## 4. Comando `all` — pipeline completa in un solo passaggio
+## 3. Comando `all` — pipeline completa in un solo passaggio
 
 ```bash
 python rfc_pipeline.py all rfc-index.xml --enriched-output output/graph_data_enriched.json
 ```
 
-## 5. Verifiche sull'output finale
+## 4. Verifiche sull'output finale
 
 Conteggio nodi/archi e controllo che lo schema sia quello atteso:
 
@@ -133,9 +113,11 @@ print('Archi pendenti trovati:', len(pendenti))
 "
 ```
 
-## 6. Fase `draft_metadata_enricher.py` — secondo passaggio, solo draft/aborted
+---
 
-⚠️ Va lanciato **dopo** un `enrich` (punto 3) che abbia già prodotto `graph_data_enriched.json` con i draft dentro (cioè senza `--skip-drafts`): questo script non crea nodi, arricchisce solo quelli già presenti che risultano incompleti (`url` mancante o `year` nullo).
+## 5. Fase `draft_metadata_enricher.py` — secondo passaggio, solo draft/aborted
+
+⚠️ Va lanciato **dopo** un `enrich` (punto 2) che abbia già prodotto `graph_data_enriched.json` con i draft dentro (cioè senza `--skip-drafts`): questo script non crea nodi, arricchisce solo quelli già presenti che risultano incompleti (`url` mancante o `year` nullo).
 
 Run di base, in place sullo stesso file (input e output coincidono):
 
@@ -199,7 +181,7 @@ print('Draft/aborted senza year:', senza_year, '(atteso: >0 ma minoranza)')
 
 ---
 
-## 7. Avvio del sistema — build del frontend Angular e serving statico
+## 6. Avvio del sistema — build del frontend Angular e serving statico
 
 Riferimento per avviare il frontend una volta che `graph_data_enriched.json` è pronto in `backend/output/` (va copiato o linkato dentro la cartella servita da Angular, tipicamente `public/data/` o `src/assets/data/`, prima della build).
 
@@ -227,7 +209,7 @@ Per rigenerare il frontend dopo una modifica al codice Angular o dopo aver aggio
 
 ---
 
-## 8. Pulizia tra un test e l'altro
+## 7. Pulizia tra un test e l'altro
 
 Rimuove stato e cache di `rfc_pipeline.py` per ripartire completamente da zero (usare con cautela: la prossima `enrich` rifà tutte le chiamate a Datatracker):
 
