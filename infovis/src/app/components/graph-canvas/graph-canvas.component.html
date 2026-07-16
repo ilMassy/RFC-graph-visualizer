@@ -1,0 +1,173 @@
+<div class="graph-shell">
+
+  <!-- Overlay a schermo intero per il caricamento iniziale: resta visibile
+       finché il grafo non è davvero pronto (dati caricati + layout di forza
+       assestato), così l'utente vede il grafo comparire già completo. -->
+  <div class="initial-load-overlay" [class.is-hidden]="graphReady() || loadError()">
+    <div class="initial-load-spinner"></div>
+    <p>{{ loadingMessage() }}</p>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button type="button" class="back-btn" (click)="exitToMenu()">
+      ← Menu
+    </button>
+    <button type="button" class="reset-btn" (click)="resetView()">⟲ Reset vista</button>
+    <button type="button" class="filter-btn" [class.active]="filtersOpen()" (click)="toggleFiltersPanel()">
+      ⚙ Filtri @if (filtersActive()) { <span class="filter-dot"></span> }
+    </button>
+    <button type="button" [disabled]="filteredMatchCount() === null" (click)="goToMatch(-1)">‹ Prec.</button>
+    <button type="button" [disabled]="filteredMatchCount() === null" (click)="goToMatch(1)">Succ. ›</button>
+    <button type="button" class="help-btn" (click)="openControlsHelp()" title="Mostra i comandi del mouse">?</button>
+    <span class="counter">
+      @if (filteredMatchCount() !== null) {
+        {{ filteredMatchCount() }} evidenziati su {{ totalNodeCount() }}
+      } @else {
+        {{ totalNodeCount() }} RFC pubblicati
+      }
+    </span>
+  </div>
+
+  <!-- Pannello filtri -->
+  @if (filtersOpen()) {
+    <div class="filters-panel">
+      <div class="filter-section">
+        <span class="filter-title">Decade</span>
+        <div class="decade-grid">
+          @for (decade of decadesList(); track decade) {
+            <label class="filter-check">
+              <input type="checkbox" [checked]="decadeFilter().has(decade)" (change)="toggleDecade(decade)" />
+              {{ decade }}s
+            </label>
+          }
+        </div>
+      </div>
+
+      <div class="filter-section wg-section">
+        <span class="filter-title">Working group   </span>
+        <input
+          type="text"
+          class="wg-search"
+          placeholder="Cerca working group…"
+          [value]="workingGroupSearch()"
+          (input)="onWorkingGroupSearch($event)"
+        />
+        <div class="wg-list">
+          <label class="filter-check">
+            <input type="checkbox" [checked]="selectedWorkingGroups().size === 0" (change)="clearWorkingGroupSelection()" />
+            Mostra tutti
+          </label>
+          @for (wg of filteredWorkingGroups(); track wg) {
+            <label class="filter-check">
+              <input type="checkbox" [checked]="selectedWorkingGroups().has(wg)" (change)="toggleWorkingGroup(wg)" />
+              {{ wg }}
+            </label>
+          }
+          @if (filteredWorkingGroups().length === 0) {
+            <p class="wg-empty">Nessun working group corrisponde alla ricerca.</p>
+          }
+        </div>
+      </div>
+
+      <p class="filter-hint">I nodi e gli archi che non corrispondono vengono evidenziati in grigio.</p>
+
+      <button type="button" class="reset-filters-btn" (click)="resetFilters()">Azzera filtri</button>
+    </div>
+  }
+
+  <!-- Area di rendering -->
+  <div class="canvas-wrapper">
+
+    @if (loadError()) {
+      <div class="state-overlay error">
+        <p><strong>Impossibile caricare il grafo.</strong></p>
+        <p>{{ loadError() }}</p>
+      </div>
+    } @else if (!loaded()) {
+      <div class="state-overlay loading">
+        <p>Caricamento enriched.json…</p>
+      </div>
+    }
+
+    <div #containerEl class="force-graph-container"></div>
+
+    <!-- Legenda layer + relazioni -->
+    <div class="legend">
+      <div class="legend-group">
+        <span class="legend-title">Layer</span>
+        <div class="legend-item"><span class="swatch" [style.background]="layerColors.Application"></span>Application</div>
+        <div class="legend-item"><span class="swatch" [style.background]="layerColors.Transport"></span>Transport</div>
+        <div class="legend-item"><span class="swatch" [style.background]="layerColors.Network"></span>Network</div>
+        <div class="legend-item"><span class="swatch" [style.background]="layerColors.Unclassified"></span>Unclassified</div>
+      </div>
+      <div class="legend-group">
+        <span class="legend-title">Relazioni</span>
+        <div class="legend-item"><span class="line-swatch" [style.background]="linkColors.obsoletes"></span>Obsoletes</div>
+        <div class="legend-item"><span class="line-swatch line-thin" [style.background]="linkColors.updates"></span>Updates</div>
+      </div>
+    </div>
+
+    <!-- Pannello di dettaglio -->
+    @if (selectedNode(); as node) {
+      <div class="detail-panel">
+        <h3>{{ node.id }}</h3>
+        <p class="title">{{ node.title }}</p>
+        <dl>
+          <dt>Status</dt><dd>{{ node.status ?? '—' }}</dd>
+          <dt>Anno</dt><dd>{{ node.year ?? '—' }}</dd>
+          <dt>Layer</dt>
+          <dd>
+            @if (node.layer) {
+              {{ node.layer }}
+            } @else if (node.layer_hint) {
+              {{ node.layer_hint }} <span class="hint-tag">(layer_hint, non verificato)</span>
+            } @else {
+              Unclassified
+            }
+          </dd>
+          <dt>Working group</dt><dd>{{ node.working_group ?? '—' }}</dd>
+          <dt>Impact score</dt><dd>{{ node.impact_score }}</dd>
+          <dt>Updates / Obsoletes</dt><dd>{{ node.n_updates }} / {{ node.n_obsoletes }}</dd>
+        </dl>
+
+        @if (node.keywords && node.keywords.length > 0) {
+          <div class="keywords">
+            @for (kw of node.keywords; track kw) {
+              <span class="keyword-chip">{{ kw }}</span>
+            }
+          </div>
+        }
+
+        @if (node.abstract) {
+          <p class="abstract">{{ node.abstract }}</p>
+        }
+
+        @if (docUrl(node); as url) {
+          <a [href]="url" target="_blank" rel="noopener">Apri documento originale ↗</a>
+        }
+      </div>
+    }
+
+    <!-- Overlay comandi mouse -->
+    @if (controlsHelpOpen()) {
+      <div class="controls-help-backdrop" (click)="closeControlsHelp()">
+        <div class="controls-help-card" (click)="$event.stopPropagation()">
+          <div class="controls-help-row">
+            <span class="controls-help-icon">🖱️</span>
+            <span class="controls-help-text"><strong>Tasto sinistro:</strong> tieni premuto e trascina per RUOTARE la scena</span>
+          </div>
+          <div class="controls-help-row">
+            <span class="controls-help-icon">🖱️</span>
+            <span class="controls-help-text"><strong>Tasto destro:</strong> tieni premuto e trascina per SPOSTARE la scena (pan)</span>
+          </div>
+          <div class="controls-help-row">
+            <span class="controls-help-icon">🖲️</span>
+            <span class="controls-help-text"><strong>Rotellina:</strong> scorri per fare ZOOM avanti e indietro</span>
+          </div>
+          <button type="button" class="controls-help-ok" (click)="closeControlsHelp()">OK</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

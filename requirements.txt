@@ -1,6 +1,7 @@
-# rfc_pipeline.py non ha dipendenze esterne: usa solo la libreria
-# standard di Python (argparse, urllib, xml.etree.ElementTree, ecc.).
-# Richiede Python >= 3.9.
+# Nessuno script del backend ha dipendenze esterne: sia
+# rfc_pipeline.py che draft_metadata_enricher.py usano solo la
+# libreria standard di Python (argparse, urllib, xml.etree.ElementTree,
+# json, re, ecc.). Richiesto Python >= 3.9.
 #
 # Questo file resta come punto di riferimento per eventuali dipendenze
 # future (es. se si aggiungesse un piccolo backend HTTP al posto del

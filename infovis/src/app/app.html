@@ -1,0 +1,14 @@
+@switch (view()) {
+  @case ('menu') {
+    <app-landing-menu
+      (selectRfcGraph)="showRfcGraph()"
+      (selectDraftTimeline)="showDraftTimeline()"
+    ></app-landing-menu>
+  }
+  @case ('rfc-graph') {
+    <app-graph-canvas class="viewport" (exit)="backToMenu()"></app-graph-canvas>
+  }
+  @case ('draft-timeline') {
+    <app-draft-timeline class="viewport" (exit)="backToMenu()"></app-draft-timeline>
+  }
+}

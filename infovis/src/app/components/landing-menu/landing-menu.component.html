@@ -1,0 +1,26 @@
+<div class="menu-shell">
+  <div class="menu-inner">
+    <h1>RFC Graph Visualizer</h1>
+    <p class="subtitle">Due modi diversi di esplorare l'evoluzione degli standard IETF.</p>
+
+    <div class="menu-options">
+      <button type="button" class="menu-card" (click)="selectRfcGraph.emit()">
+        <span class="menu-card-icon">✦</span>
+        <span class="menu-card-title">Visualizza grafo degli RFC</span>
+        <span class="menu-card-desc">
+          Grafo 3D interattivo, ambientato nello spazio: tutti gli RFC pubblicati e le loro relazioni
+          Updates/Obsoletes.
+        </span>
+      </button>
+
+      <button type="button" class="menu-card" (click)="selectDraftTimeline.emit()">
+        <span class="menu-card-icon">▤</span>
+        <span class="menu-card-title">Visualizza RFC in draft e abortiti</span>
+        <span class="menu-card-desc">
+          Linea temporale a istogramma: ogni Internet-Draft e documento ritirato/sostituito, un anno
+          alla volta, in pile ordinate alfabeticamente.
+        </span>
+      </button>
+    </div>
+  </div>
+</div>

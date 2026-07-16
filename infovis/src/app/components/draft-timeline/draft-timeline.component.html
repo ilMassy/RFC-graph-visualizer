@@ -1,0 +1,105 @@
+<div class="timeline-shell">
+
+  <div class="toolbar">
+    <button type="button" class="back-btn" (click)="exit.emit()">← Menu</button>
+    <button type="button" class="filter-btn" [class.active]="filtersOpen()" (click)="toggleFiltersPanel()">
+      ⚙ Working group @if (selectedWorkingGroups().size > 0) { <span class="filter-dot"></span> }
+    </button>
+    <span class="hint">
+      Trascina per scorrere nel tempo (sinistra = più vecchio, destra = più recente) · rotella per zoom ·
+      in ogni pila, i documenti sono ordinati <strong>alfabeticamente dal basso verso l'alto</strong>
+    </span>
+    <span class="counter">{{ totalCount() }} documenti</span>
+  </div>
+
+  @if (filtersOpen()) {
+    <div class="filters-panel">
+      <span class="filter-title">Working group</span>
+      <input
+        type="text"
+        class="wg-search"
+        placeholder="Cerca working group…"
+        [value]="workingGroupSearch()"
+        (input)="onWorkingGroupSearch($event)"
+      />
+      <div class="wg-list">
+        <label class="filter-check">
+          <input type="checkbox" [checked]="selectedWorkingGroups().size === 0" (change)="clearWorkingGroupSelection()" />
+          Mostra tutti
+        </label>
+        @for (wg of filteredWorkingGroups(); track wg) {
+          <label class="filter-check">
+            <input type="checkbox" [checked]="selectedWorkingGroups().has(wg)" (change)="toggleWorkingGroup(wg)" />
+            {{ wg }}
+          </label>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="canvas-wrapper" #wrapperEl>
+
+    @if (loadError()) {
+      <div class="state-overlay error">
+        <p><strong>Impossibile caricare i dati.</strong></p>
+        <p>{{ loadError() }}</p>
+      </div>
+    } @else if (!loaded()) {
+      <div class="state-overlay loading">
+        <p>Caricamento enriched.json…</p>
+      </div>
+    }
+
+    <canvas #canvasEl></canvas>
+
+    <div class="legend">
+      <div class="legend-item"><span class="swatch" [style.background]="draftColor"></span>Internet-Draft</div>
+      <div class="legend-item"><span class="swatch" [style.background]="abortedColor"></span>Draft ritirato/sostituito</div>
+    </div>
+
+    @if (selectedNode(); as node) {
+      <div class="detail-panel">
+        <span class="kind-tag" [class.aborted]="node.is_aborted" [style.background]="node.is_aborted ? abortedColor + '20' : draftColor + '20'" [style.color]="node.is_aborted ? abortedColor : draftColor">
+          {{ node.is_aborted ? 'Draft ritirato/sostituito' : 'Internet-Draft attivo/scaduto' }}
+        </span>
+        <h3>{{ node.id }}</h3>
+        <p class="title">{{ node.title }}</p>
+        <dl>
+          <dt>Status</dt><dd>{{ node.status ?? '—' }}</dd>
+          <dt>Anno</dt><dd>{{ node.year ?? 'n.d.' }}</dd>
+          <dt>Layer</dt>
+          <dd>
+            @if (node.layer) {
+              {{ node.layer }}
+            } @else if (node.layer_hint) {
+              {{ node.layer_hint }} <span class="hint-tag">(layer_hint, non verificato)</span>
+            } @else {
+              Unclassified
+            }
+          </dd>
+          <dt>Working group</dt><dd>{{ node.working_group ?? '—' }}</dd>
+        </dl>
+
+        @if (node.keywords && node.keywords.length > 0) {
+          <div class="keywords">
+            @for (kw of node.keywords; track kw) {
+              <span class="keyword-chip">{{ kw }}</span>
+            }
+          </div>
+        }
+
+        @if (node.abstract) {
+          <p class="abstract">{{ node.abstract }}</p>
+        }
+
+         @if (docUrl(node); as url) {
+          <a [href]="url" target="_blank" rel="noopener">Apri documento originale ↗</a>
+          <p style="font-size: 0.65rem; color: #6b7280; margin-top: 0.4rem; font-style: italic;">
+            Nota: alcuni documenti, in particolare quelli datati, potrebbero non essere disponibili nel repository IETF.
+          </p>
+
+        }
+      </div>
+    }
+  </div>
+</div>

@@ -133,12 +133,113 @@ print('Archi pendenti trovati:', len(pendenti))
 "
 ```
 
-## 6. Pulizia tra un test e l'altro
+## 6. Fase `draft_metadata_enricher.py` — secondo passaggio, solo draft/aborted
 
-Rimuove stato e cache per ripartire completamente da zero (usare con cautela: la prossima `enrich` rifà tutte le chiamate a Datatracker):
+⚠️ Va lanciato **dopo** un `enrich` (punto 3) che abbia già prodotto `graph_data_enriched.json` con i draft dentro (cioè senza `--skip-drafts`): questo script non crea nodi, arricchisce solo quelli già presenti che risultano incompleti (`url` mancante o `year` nullo).
+
+Run di base, in place sullo stesso file (input e output coincidono):
+
+```bash
+python draft_metadata_enricher.py --input output/graph_data_enriched.json --output output/graph_data_enriched.json
+```
+
+Test rapido su un piccolo numero di nodi, senza aspettare l'intero dataset (utile per verificare che lo script funzioni prima di lanciarlo su tutti i draft):
+
+```bash
+python draft_metadata_enricher.py --input output/graph_data_enriched.json --output output/graph_data_enriched.json --limit 20
+```
+
+Verifica che `url` e `year` siano stati effettivamente valorizzati sui primi nodi arricchiti:
+
+```bash
+python -c "
+import json
+data = json.load(open('output/graph_data_enriched.json'))
+draft_nodes = [n for n in data['nodes'] if n.get('is_draft') or n.get('is_aborted')]
+con_url = sum(1 for n in draft_nodes if n.get('url'))
+con_year = sum(1 for n in draft_nodes if n.get('year') is not None)
+print('Draft/aborted totali:', len(draft_nodes))
+print('Con url risolto:', con_url)
+print('Con year risolto:', con_year)
+print(json.dumps(draft_nodes[0], indent=2))
+"
+```
+
+Test dell'interruzione/ripresa — lancia il comando e interrompi con `Ctrl+C` dopo qualche secondo, poi rilancia lo stesso comando: deve riprendere da dove si era fermato (verificalo controllando che il log iniziale riporti "già processati: N" con N > 0, invece di ripartire da zero):
+
+```bash
+python draft_metadata_enricher.py --input output/graph_data_enriched.json --output output/graph_data_enriched.json
+```
+
+Svuota la cache HTTP locale dello script (separata da quella di `rfc_pipeline.py`: directory `.cache/datatracker_docdetail`), utile se si sospetta una risposta 404 "fantasma" rimasta in cache da un errore temporaneo — qui non esiste un flag dedicato come `--clear-cache`, va cancellata a mano:
+
+```bash
+rm -rf .cache/datatracker_docdetail
+```
+
+Riparti da zero ignorando lo stato salvato (ri-arricchisce anche i nodi già completati in run precedenti):
+
+```bash
+python draft_metadata_enricher.py --input output/graph_data_enriched.json --output output/graph_data_enriched.json --force
+```
+
+Controllo finale: dopo un run completo, non dovrebbero restare draft/aborted senza `url` (deterministico, sempre risolvibile) — `year` invece può legittimamente restare `null` per i documenti che Datatracker non risolve, non è un errore:
+
+```bash
+python -c "
+import json
+data = json.load(open('output/graph_data_enriched.json'))
+draft_nodes = [n for n in data['nodes'] if n.get('is_draft') or n.get('is_aborted')]
+senza_url = sum(1 for n in draft_nodes if not n.get('url'))
+senza_year = sum(1 for n in draft_nodes if n.get('year') is None)
+print('Draft/aborted senza url:', senza_url, '(atteso: 0)')
+print('Draft/aborted senza year:', senza_year, '(atteso: >0 ma minoranza)')
+"
+```
+
+---
+
+## 7. Avvio del sistema — build del frontend Angular e serving statico
+
+Riferimento per avviare il frontend una volta che `graph_data_enriched.json` è pronto in `backend/output/` (va copiato o linkato dentro la cartella servita da Angular, tipicamente `public/data/` o `src/assets/data/`, prima della build).
+
+Build di produzione, da dentro `infovis/` (la root del progetto Angular, non `backend/`):
+
+```bash
+cd ~/Scrivania/INFOVIS/infovis
+npx ng build
+```
+
+⚠️ Il warning `Module 'ngraph.forcelayout' used by 'three-forcegraph' is not ESM` è atteso e non bloccante: è una dipendenza CommonJS del motore di force-layout 3D usato dal grafo, la build completa comunque correttamente.
+
+Servire i file statici generati (build in `dist/infovis/browser/`) con il server integrato di PHP, in ascolto solo su localhost:
+
+```bash
+cd dist/infovis/browser
+php -S 127.0.0.1:8888
+```
+
+A questo punto il frontend è raggiungibile su `http://127.0.0.1:8888`. Per fermare il server: `Ctrl+C`.
+
+**Nota**: questo è un server di sviluppo/test minimale (serve solo file statici, nessuna configurazione di caching/compressione/HTTPS) — va bene per verificare il risultato di una build locale, non è pensato per un deploy in produzione.
+
+Per rigenerare il frontend dopo una modifica al codice Angular o dopo aver aggiornato `graph_data_enriched.json`, basta ripetere `npx ng build` e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta).
+
+---
+
+## 8. Pulizia tra un test e l'altro
+
+Rimuove stato e cache di `rfc_pipeline.py` per ripartire completamente da zero (usare con cautela: la prossima `enrich` rifà tutte le chiamate a Datatracker):
 
 ```bash
 rm -rf .state .cache
+```
+
+Nota: `draft_metadata_enricher.py` usa un file di stato e una cache **separati** (`.state/draft_metadata_state.json` e `.cache/datatracker_docdetail/`), quindi il comando sopra li rimuove già entrambi se lanciato dalla stessa cartella `backend/` — se invece si vuole azzerare **solo** lo stato del secondo script, lasciando intatti quelli di `rfc_pipeline.py`:
+
+```bash
+rm -f .state/draft_metadata_state.json
+rm -rf .cache/datatracker_docdetail
 ```
 
 Rimuove solo gli output di test generati al punto 1, senza toccare lo stato del dataset reale:

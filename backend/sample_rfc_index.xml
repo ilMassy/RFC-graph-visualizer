@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rfc-index xmlns="https://www.rfc-editor.org/rfc-index">
+  <rfc-entry>
+    <doc-id>RFC0768</doc-id>
+    <title>User Datagram Protocol</title>
+    <author><name>J. Postel</name></author>
+    <date><month>August</month><year>1980</year></date>
+    <format><file-format>ASCII</file-format></format>
+    <current-status>INTERNET STANDARD</current-status>
+    <abstract><p>This RFC describes UDP, a transport protocol.</p></abstract>
+    <keywords><kw>UDP</kw><kw>datagram</kw><kw>transport</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC2460</doc-id>
+    <title>Internet Protocol, Version 6 (IPv6) Specification</title>
+    <author><name>S. Deering</name></author>
+    <date><month>December</month><year>1998</year></date>
+    <current-status>DRAFT STANDARD</current-status>
+    <obsoleted-by><doc-id>RFC8200</doc-id></obsoleted-by>
+    <abstract><p>Specifies IPv6, a network layer protocol.</p></abstract>
+    <keywords><kw>IPv6</kw><kw>IP</kw><kw>network</kw><kw>routing</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC8200</doc-id>
+    <title>Internet Protocol, Version 6 (IPv6) Specification</title>
+    <author><name>S. Deering</name></author>
+    <date><month>July</month><year>2017</year></date>
+    <current-status>INTERNET STANDARD</current-status>
+    <obsoletes><doc-id>RFC2460</doc-id></obsoletes>
+    <abstract><p>Specifies IPv6, updated network layer protocol.</p></abstract>
+    <keywords><kw>IPv6</kw><kw>IP</kw><kw>network</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC2616</doc-id>
+    <title>Hypertext Transfer Protocol -- HTTP/1.1</title>
+    <author><name>R. Fielding</name></author>
+    <date><month>June</month><year>1999</year></date>
+    <current-status>DRAFT STANDARD</current-status>
+    <obsoleted-by><doc-id>RFC7230</doc-id><doc-id>RFC7231</doc-id></obsoleted-by>
+    <abstract><p>Defines HTTP/1.1, an application layer protocol.</p></abstract>
+    <keywords><kw>HTTP</kw><kw>application</kw><kw>web</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC7230</doc-id>
+    <title>Hypertext Transfer Protocol (HTTP/1.1): Message Syntax and Routing</title>
+    <author><name>R. Fielding</name></author>
+    <date><month>June</month><year>2014</year></date>
+    <current-status>PROPOSED STANDARD</current-status>
+    <obsoletes><doc-id>RFC2616</doc-id></obsoletes>
+    <updated-by><doc-id>RFC7230</doc-id></updated-by>
+    <abstract><p>HTTP message syntax, application layer.</p></abstract>
+    <keywords><kw>HTTP</kw><kw>application</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC7231</doc-id>
+    <title>Hypertext Transfer Protocol (HTTP/1.1): Semantics and Content</title>
+    <author><name>R. Fielding</name></author>
+    <date><month>June</month><year>2014</year></date>
+    <current-status>PROPOSED STANDARD</current-status>
+    <obsoletes><doc-id>RFC2616</doc-id></obsoletes>
+    <abstract><p>HTTP semantics, application layer protocol.</p></abstract>
+    <keywords><kw>HTTP</kw><kw>application</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC793</doc-id>
+    <title>Transmission Control Protocol</title>
+    <author><name>J. Postel</name></author>
+    <date><month>September</month><year>1981</year></date>
+    <current-status>INTERNET STANDARD</current-status>
+    <updated-by><doc-id>RFC3168</doc-id><doc-id>RFC6093</doc-id><doc-id>RFC9293</doc-id></updated-by>
+    <abstract><p>Defines TCP, a transport layer protocol.</p></abstract>
+    <keywords><kw>TCP</kw><kw>transport</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC3168</doc-id>
+    <title>The Addition of Explicit Congestion Notification (ECN) to IP</title>
+    <author><name>K. Ramakrishnan</name></author>
+    <date><month>September</month><year>2001</year></date>
+    <current-status>PROPOSED STANDARD</current-status>
+    <updates><doc-id>RFC793</doc-id></updates>
+    <abstract><p>Adds ECN support, transport layer update.</p></abstract>
+    <keywords><kw>TCP</kw><kw>ECN</kw><kw>transport</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC6093</doc-id>
+    <title>On the Implementation of the TCP Urgent Mechanism</title>
+    <author><name>F. Gont</name></author>
+    <date><month>January</month><year>2011</year></date>
+    <current-status>PROPOSED STANDARD</current-status>
+    <updates><doc-id>RFC793</doc-id></updates>
+    <abstract><p>Clarifies TCP urgent pointer, transport layer.</p></abstract>
+    <keywords><kw>TCP</kw><kw>transport</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC9293</doc-id>
+    <title>Transmission Control Protocol (TCP) Specification</title>
+    <author><name>W. Eddy</name></author>
+    <date><month>August</month><year>2022</year></date>
+    <current-status>INTERNET STANDARD</current-status>
+    <updates><doc-id>RFC793</doc-id></updates>
+    <abstract><p>Consolidated TCP specification, transport layer.</p></abstract>
+    <keywords><kw>TCP</kw><kw>transport</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC0854</doc-id>
+    <title>Telnet Protocol Specification</title>
+    <author><name>J. Postel</name></author>
+    <date><month>May</month><year>1983</year></date>
+    <current-status>INTERNET STANDARD</current-status>
+    <abstract><p>Defines Telnet, an application layer protocol.</p></abstract>
+    <keywords><kw>Telnet</kw><kw>application</kw></keywords>
+  </rfc-entry>
+  <rfc-entry>
+    <doc-id>RFC0894</doc-id>
+    <title>A Standard for the Transmission of IP Datagrams over Ethernet Networks</title>
+    <author><name>C. Hornig</name></author>
+    <date><month>April</month><year>1984</year></date>
+    <current-status>INTERNET STANDARD</current-status>
+    <abstract><p>Describes IP over Ethernet, a link layer concern, out of scope.</p></abstract>
+    <keywords><kw>Ethernet</kw><kw>link layer</kw></keywords>
+  </rfc-entry>
+</rfc-index>

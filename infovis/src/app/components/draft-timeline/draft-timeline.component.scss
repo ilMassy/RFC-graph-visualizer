@@ -1,0 +1,302 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.timeline-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  color: #1a1a1a;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1rem;
+  background: #f4f5f7;
+  border-bottom: 1px solid #dfe2e8;
+  z-index: 5;
+}
+
+.back-btn {
+  background: rgba(0, 114, 178, 0.08);
+  color: #0072b2;
+  border: 1px solid rgba(0, 114, 178, 0.4);
+  border-radius: 6px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: rgba(0, 114, 178, 0.16);
+  }
+}
+
+.hint {
+  font-size: 0.78rem;
+  color: #6b7280;
+
+  strong {
+    color: #374151;
+  }
+}
+
+.counter {
+  font-variant-numeric: tabular-nums;
+  color: #6b7280;
+  font-size: 0.8rem;
+  margin-left: auto;
+}
+
+.canvas-wrapper {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  canvas {
+    display: block;
+  }
+}
+
+.state-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.9);
+
+  p {
+    margin: 0.2rem 0;
+  }
+
+  &.error {
+    color: #d55e00;
+  }
+
+  &.loading {
+    color: #6b7280;
+  }
+}
+
+.legend {
+  position: absolute;
+  bottom: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 1rem;
+  background: #ffffff;
+  border: 1px solid #dfe2e8;
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  z-index: 5;
+  pointer-events: none;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #374151;
+}
+
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.detail-panel {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 320px;
+  max-height: calc(100% - 2rem);
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #dfe2e8;
+  border-radius: 12px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.14);
+  z-index: 6;
+
+  h3 {
+    margin: 0.3rem 0 0.1rem;
+    font-family: 'IBM Plex Mono', monospace;
+    color: #0072b2;
+  }
+
+  .title {
+    margin: 0 0 0.7rem;
+    font-size: 0.85rem;
+    color: #374151;
+  }
+
+  dl {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.25rem 0.7rem;
+    margin: 0 0 0.8rem;
+    font-size: 0.78rem;
+  }
+
+  dt {
+    color: #6b7280;
+  }
+
+  dd {
+    margin: 0;
+    text-align: right;
+    color: #1a1a1a;
+  }
+
+  .hint-tag {
+    display: block;
+    font-size: 0.62rem;
+    color: #b45309;
+  }
+
+  .abstract {
+    font-size: 0.78rem;
+    line-height: 1.4;
+    color: #374151;
+    max-height: 8rem;
+    overflow-y: auto;
+    border-top: 1px solid #eceef2;
+    padding-top: 0.6rem;
+    margin: 0 0 0.8rem;
+  }
+
+  a {
+    display: inline-block;
+    color: #0072b2;
+    font-size: 0.8rem;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.kind-tag {
+  display: inline-block;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.keywords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 0.8rem;
+}
+
+.keyword-chip {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #f4f5f7;
+  border: 1px solid #dfe2e8;
+  color: #374151;
+}
+
+.filter-btn {
+  background: rgba(0, 114, 178, 0.08);
+  color: #0072b2;
+  border: 1px solid rgba(0, 114, 178, 0.4);
+  border-radius: 6px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+
+  &:hover { background: rgba(0, 114, 178, 0.16); }
+  &.active { background: rgba(0, 114, 178, 0.22); }
+}
+
+.filter-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #D55E00;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.filters-panel {
+  position: absolute;
+  top: 3.1rem;
+  left: 1rem;
+  z-index: 8;
+  background: #ffffff;
+  border: 1px solid #dfe2e8;
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  min-width: 240px;
+}
+
+.filter-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.wg-search {
+  width: 100%;
+  box-sizing: border-box;
+  background: #f4f5f7;
+  border: 1px solid #dfe2e8;
+  border-radius: 6px;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.78rem;
+  color: #1a1a1a;
+  margin-bottom: 0.4rem;
+}
+
+.wg-list {
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.filter-check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: #374151;
+  cursor: pointer;
+
+  input {
+    accent-color: #0072b2;
+    cursor: pointer;
+  }
+}
