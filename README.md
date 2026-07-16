@@ -11,6 +11,8 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 ## Architettura usata
 
 Il progetto è diviso in due componenti indipendenti, collegate da un solo contratto: il file graph_data_enriched.json.
+
+```
 ┌─────────────────────┐         ┌──────────────────────────┐
 │   BACKEND (Python)   │         │    FRONTEND (Angular)    │
 │                      │         │                          │
@@ -29,6 +31,7 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 │  - datatracker.ietf  │         │   (istogramma temporale, │
 │    .org (REST API)   │         │    solo draft/aborted)   │
 └─────────────────────┘         └──────────────────────────┘
+```
 
 **Python** è usato solo lato backend, come pipeline batch/offline: non serve nulla in tempo reale, il suo compito è produrre `graph_data_enriched.json` combinando due fonti autorevoli (l'indice ufficiale RFC e l'API IETF Datatracker), poi completato da un secondo script che risolve i campi ancora mancanti sui soli documenti draft/aborted.
 
@@ -40,6 +43,7 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 
 Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggiorna ad ogni "tick" della simulazione o ad ogni interazione di zoom/pan.
 
+```
 ## Struttura del repository
 RFC-graph-visualizer/
 ├── backend/
@@ -54,6 +58,7 @@ RFC-graph-visualizer/
 ├── .gitignore                                   # Regole di esclusione: cache/stato pipeline, output JSON generati, ambiente Python, Angular (in previsione)
 ├── README.md                                    # Questo file
 └── requirements.txt                             # Dipendenze Python (nessuna esterna: solo libreria standard)
+```
 
 ### `backend/rfc_pipeline.py`
 
