@@ -385,7 +385,7 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     // "collante", con più spinta a separarsi. Valori di partenza, poi
     // sovrascritti dal chargeStrength (molto più alto) nell'effect 1 non
     // appena i dati sono pronti.
-    this.graph.d3Force('charge').strength(-5000).distanceMax(2000);
+    this.graph.d3Force('charge').strength(-7000).distanceMax(3000);
     this.graph.d3Force('link').distance(650).strength(0.03);
 
     // Performance: iterazioni di collisione limitate a 2. È la parte più
@@ -515,9 +515,24 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
 
   private focusOn(node: GraphNode): void {
     this.selectedNode.set(node);
-    const reachableIds = this.graphData.reachableFrom(node.id, 1); // limita i hop, es. 1
-    this.highlightNodes = new Set(reachableIds);
-    this.highlightLinks = new Set(this.graphData.linksAmong(reachableIds));
+
+    // Solo archi USCENTI dal nodo selezionato (source === node.id), non
+    // quelli entranti: a differenza di reachableFrom/linksAmong (che non
+    // distinguono la direzione), qui si filtrano i link direttamente sul
+    // dataset completo così da evidenziare solo ciò che parte dal nodo.
+    const fullData = this.graphData.graphData();
+    const outgoingLinks = fullData.links.filter(l => {
+      const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+      return sourceId === node.id;
+    });
+    const reachableIds = new Set<string>([node.id]);
+    for (const l of outgoingLinks) {
+      const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+      reachableIds.add(targetId);
+    }
+
+    this.highlightNodes = reachableIds;
+    this.highlightLinks = new Set(outgoingLinks);
     this.refreshStyles();
 
     this.selectedNodeRef = node;
