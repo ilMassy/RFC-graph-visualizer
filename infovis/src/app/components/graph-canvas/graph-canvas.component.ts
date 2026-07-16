@@ -186,12 +186,12 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
       this.graph.graphData(fullData);
       this.graphDataInitialized = true;
 
-      // Repulsione scalata in base al numero di nodi (fino a -19200 con
-      // dataset grandi). Per compensare la spinta più forte senza
+      // Repulsione scalata in base al numero di nodi
+      // Per compensare la spinta più forte senza
       // allungare troppo i tempi di assestamento, d3VelocityDecay/
       // d3AlphaDecay in setupGraph() sono alzati leggermente rispetto ai
       // default di 3d-force-graph.
-      const chargeStrength = -7200 - 12000 * Math.min(1, fullData.nodes.length / 6000);
+      const chargeStrength = -10000 - 20000 * Math.min(1, fullData.nodes.length / 6000);
       this.graph.d3Force('charge').strength(chargeStrength).distanceMax(3200);
     });
 
@@ -385,7 +385,7 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     // "collante", con più spinta a separarsi. Valori di partenza, poi
     // sovrascritti dal chargeStrength (molto più alto) nell'effect 1 non
     // appena i dati sono pronti.
-    this.graph.d3Force('charge').strength(-3200).distanceMax(2000);
+    this.graph.d3Force('charge').strength(-5000).distanceMax(2000);
     this.graph.d3Force('link').distance(650).strength(0.03);
 
     // Performance: iterazioni di collisione limitate a 2. È la parte più
