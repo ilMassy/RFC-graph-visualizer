@@ -113,6 +113,17 @@ Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`
 
 I comandi di test dettagliati per entrambi gli script, oltre ai comandi per l'avvio del frontend, sono in [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md).
 
+### Dataset già pronto (alternativa rapida)
+
+Se non vuoi rilanciare l'intera pipeline (parsing + enrichment, che richiede tempo per il rate limiting di Datatracker), è disponibile un dataset già generato nella sezione [Releases](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v1) del repository:
+
+```bash
+wget https://github.com/ilMassy/RFC-graph-visualizer/releases/download/dataset-v1/graph_data_enriched.zip
+unzip graph_data_enriched.zip -d infovis/public/data/
+```
+
+⚠️ Il dataset scaricato riflette lo stato delle fonti IETF al momento della generazione (vedi il campo `meta.generated_at` dentro il JSON) — per dati aggiornati, va comunque rilanciata la pipeline.
+
 ## Riferimenti
 
 - **RFC Editor** — [rfc-editor.org](https://www.rfc-editor.org/), fonte dell'indice ufficiale `rfc-index.xml` usato in fase di parsing.
