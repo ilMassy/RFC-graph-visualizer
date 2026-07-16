@@ -6,11 +6,11 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 
 ## Stato del progetto
 
-🚧 **In sviluppo.** Il repository contiene la pipeline dati completa (backend Python, due script: parsing/enrichment principale e un secondo passaggio dedicato ai draft), i comandi di test e la documentazione tecnica. Il frontend (Angular + D3.js) è stato implementato in locale — menu iniziale, grafo 3D degli RFC pubblicati, timeline a istogramma per draft/aborted — ma non è ancora stato aggiunto al repository.
+🚧 **In sviluppo.** Il repository contiene sia la pipeline dati (backend Python, due script: parsing/enrichment principale e un secondo passaggio dedicato ai draft) sia il frontend Angular — menu iniziale, grafo 3D degli RFC pubblicati, timeline a istogramma per draft/aborted — oltre ai comandi di test e alla documentazione tecnica. I dati generati dalla pipeline (`graph_data_enriched.json` e simili) **non** sono versionati: vanno rigenerati localmente (vedi [Come iniziare](#come-iniziare)).
 
 ## Architettura usata
 
-Il progetto è diviso in due componenti indipendenti, collegate da un solo contratto: il file graph_data_enriched.json.
+Il progetto è diviso in due componenti indipendenti, collegate da un solo contratto: il file `graph_data_enriched.json`.
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────┐
@@ -52,7 +52,7 @@ RFC-graph-visualizer/
 │   ├── draft_metadata_enricher.py               # Secondo passaggio, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
 │   └── sample_rfc_index.xml                     # Indice RFC di esempio, ridotto, per test rapidi della fase `parse` senza scaricare il dataset reale
 ├── docs/
-│   ├── comandi_per_testare.md                   # Comandi di test per entrambi gli script della pipeline (parsing, enrichment, draft metadata) e per l'avvio del frontend
+│   ├── comandi_per_testare.md                   # Comandi per clonare il repo, testare entrambi gli script della pipeline e avviare il frontend
 │   └── Progetto_Infovis/
 │       └── aggiornamenti_e_proposte/
 │           ├── aggiornamenti_e_proposte_1.md    # Aggiornamenti sullo stato del progetto e proposte sul design del grafo (versione 1)
@@ -101,6 +101,16 @@ Secondo passaggio di arricchimento, separato dal primo per tenere distinte le re
 
 Va lanciato dopo un `enrich` completo (senza `--skip-drafts`). Stesso paradigma incrementale del primo script: stato persistito su disco, cache HTTP (incluse le risposte 404), checkpoint periodici, retry con backoff.
 
+## Come iniziare
+
+Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`): dopo il clone vanno rigenerati in locale prima di poter usare il frontend. Il riferimento completo, comando per comando, è in [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md), che parte proprio dal clone del repository. In sintesi, i passaggi sono:
+
+1. Clonare il repository e posizionarsi nella cartella `backend/`.
+2. Creare il virtualenv Python e lanciare `rfc_pipeline.py` (fasi `parse` + `enrich`).
+3. Lanciare `draft_metadata_enricher.py` per completare i campi mancanti sui draft.
+4. Copiare `graph_data_enriched.json` nella cartella dati del frontend (`infovis/public/data/`).
+5. Fare la build di Angular (`npx ng build`) e servire la cartella generata.
+
 I comandi di test dettagliati per entrambi gli script, oltre ai comandi per l'avvio del frontend, sono in [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md).
 
 ## Riferimenti
@@ -109,8 +119,8 @@ I comandi di test dettagliati per entrambi gli script, oltre ai comandi per l'av
 - **IETF Datatracker** — [datatracker.ietf.org](https://datatracker.ietf.org/), fonte autorevole per layer di rete, working group, Internet-Draft e per la data di ultima revisione dei draft; API pubblica documentata su [datatracker.ietf.org/api/v1](https://datatracker.ietf.org/api/v1/).
 - **IETF** — [ietf.org](https://www.ietf.org/), organizzazione responsabile dello sviluppo degli standard Internet documentati come RFC.
 - **Brin, S., Page, L. (1998)** — [The Anatomy of a Large-Scale Hypertextual Web Search Engine (Archived)](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html), paper di riferimento per l'algoritmo PageRank originale, adattato come variante pesata per il calcolo dell'`impact_score` dei nodi RFC.
-- **D3.js** — [d3js.org](https://d3js.org/), libreria usata nel frontend (implementato in locale, non ancora nel repository) per la force simulation 3D e la gestione di zoom/pan.
-- **Angular** — [angular.dev](https://angular.dev/), framework usato per il frontend (implementato in locale, non ancora nel repository).
+- **D3.js** — [d3js.org](https://d3js.org/), libreria usata nel frontend per la force simulation 3D e la gestione di zoom/pan.
+- **Angular** — [angular.dev](https://angular.dev/), framework usato per il frontend.
 
 ## Autore
 Massimiliano Giangreco.
