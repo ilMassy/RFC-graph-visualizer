@@ -441,7 +441,7 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     controls.autoRotateSpeed = 0.5;
     controls.zoomSpeed = 1.5;
     controls.minDistance = 0.5;
-    controls.maxDistance = 20000;
+    controls.maxDistance = 40000;
     controls.panSpeed = 0.9;
     controls.rotateSpeed = 0.9;
 
