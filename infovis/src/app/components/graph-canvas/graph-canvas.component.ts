@@ -156,6 +156,15 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
    *  può scattare più volte (es. dopo un d3ReheatSimulation successivo), ma
    *  la schermata di caricamento iniziale va nascosta solo alla prima. */
   private readyEmitted = false;
+  /** La simulazione fisica (charge+link+collide) converge in tempo fisso
+   *  ma NON garantisce che ogni singola coppia di nodi vicini abbia già
+   *  risolto l'overlap in quel budget — specialmente in zone dense. Questo
+   *  flag distingue il primo `onEngineStop` (fine simulazione normale) dal
+   *  secondo, che scatta dopo il passaggio deterministico di pulizia
+   *  collisioni (vedi resolveAllCollisions()): solo dopo quello si rivela
+   *  il grafo, con zero overlap garantito indipendentemente da quanto ha
+   *  girato la fisica prima. */
+  private collisionPolishDone = false;
 
   private selectedNodeRef: GraphNode | null = null;
   private pulseStartTime = 0;
@@ -230,13 +239,15 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     this.observeResize();
 
     // Sequenza temporizzata dei messaggi
-    setTimeout(() => this.loadingMessage.set('Assestamento delle forze…'), 10000);
-    setTimeout(() => this.loadingMessage.set('Quasi fatto…'), 20000);
+    setTimeout(() => this.loadingMessage.set('Assestamento delle forze…'), 3000);
+    setTimeout(() => this.loadingMessage.set('Quasi fatto…'), 6500);
 
     // Rete di sicurezza: se onEngineStop non dovesse mai scattare (versioni
     // diverse della libreria, dataset patologico, ecc.) non si vuole restare
-    // bloccati con la schermata di caricamento a vita.
-    setTimeout(() => this.markGraphReady(), 28000);
+    // bloccati con la schermata di caricamento a vita. Include margine per
+    // il passaggio di pulizia collisioni (resolveAllCollisions), che gira
+    // subito dopo l'onEngineStop normale prima di rivelare il grafo.
+    setTimeout(() => this.markGraphReady(), 10000);
 
     // Se i dati sono già nel servizio ritorna subito, altrimenti attende
     // il completamento del fetch.
@@ -369,7 +380,12 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
       .linkDirectionalParticleWidth(1.6)
       .linkDirectionalParticleSpeed(0.006)
       .cooldownTicks(1000)
-      .cooldownTime(25000)
+      // Questo tempo governa solo la QUALITÀ dello sparpagliamento del
+      // layout (charge/link), non più la garanzia di zero overlap: quella
+      // è ora responsabilità di resolveAllCollisions(), che scatta
+      // comunque all'onEngineStop qui sotto indipendentemente da quanto è
+      // durata questa fase. Si può quindi tenerlo basso senza rischi.
+      .cooldownTime(8000)
       .onEngineStop(() => this.handleEngineStop())
       .onNodeClick((n: GraphNode) => this.focusOn(n))
       .onBackgroundClick(() => this.clearFocus())
@@ -565,8 +581,17 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
 
   goToMatch(step: 1 | -1): void {
     if (this.filterMatchList.length === 0) return;
-    const current = this.filterMatchIndex();
-    const next = current === null ? 0 : (current + step + this.filterMatchList.length) % this.filterMatchList.length;
+    let current = this.filterMatchIndex();
+    if (current === null) {
+      // Nessun cursore attivo (es. appena cambiati i filtri): se ci si
+      // trova già su un nodo che soddisfa i filtri correnti, la
+      // navigazione riparte da lì; altrimenti si parte "prima" del primo
+      // elemento della lista, così Succ. va al primo e Prec. all'ultimo.
+      const selected = this.selectedNode();
+      const selectedIndex = selected ? this.filterMatchList.indexOf(selected.id) : -1;
+      current = selectedIndex;
+    }
+    const next = (current + step + this.filterMatchList.length) % this.filterMatchList.length;
     this.filterMatchIndex.set(next);
 
     const node = this.graphData.getNode(this.filterMatchList[next]);
@@ -582,7 +607,106 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     if (this.readyEmitted) return;
     if (!this.graphDataInitialized) return;
     if (this.graphData.graphData().nodes.length === 0) return;
+
+    // Prima di rivelare il grafo, garanzia deterministica zero-overlap:
+    // vedi resolveAllCollisions(). Costa pochissimo (una volta sola, con
+    // griglia spaziale) rispetto ad allungare l'intera simulazione fisica.
+    if (!this.collisionPolishDone) {
+      this.collisionPolishDone = true;
+      this.resolveAllCollisions();
+    }
+
     this.markGraphReady();
+  }
+
+  /** Passaggio finale, deterministico e indipendente dalla fisica a
+   *  molla/repulsione: per ogni nodo, cerca (con una griglia spaziale, non
+   *  un confronto O(n²) — con ~9.800 nodi sarebbe troppo lento) gli altri
+   *  nodi abbastanza vicini da poter collidere e, se la distanza tra i due
+   *  centri è inferiore alla somma dei raggi di collisione, li allontana
+   *  esattamente quanto basta a eliminare l'overlap. Ripete finché non
+   *  trova più alcuna sovrapposizione (o fino a un tetto di sicurezza di
+   *  passate), quindi il risultato NON dipende da quanti tick ha girato
+   *  la simulazione prima: anche con un `cooldownTime` molto basso, questo
+   *  passaggio chiude comunque ogni overlap residuo. */
+  private resolveAllCollisions(): void {
+    if (!this.graph) return;
+    type PositionedNode = GraphNode & { x: number; y: number; z: number };
+    const nodes = (this.graph.graphData().nodes as PositionedNode[]).filter(
+      n => n.x != null && n.y != null && n.z != null,
+    );
+    if (nodes.length === 0) return;
+
+    // Stesso moltiplicatore di raggio usato dalla forceCollide in
+    // setupGraph, per coerenza con la "zona personale" già impostata lì.
+    const collisionRadius = (n: PositionedNode) => this.radiusFor(n.impact_score) * 4.5;
+    const maxRadius = nodes.reduce((max, n) => Math.max(max, collisionRadius(n)), 0);
+    // Celle grandi quanto il doppio del raggio massimo: basta controllare
+    // le 26 celle adiacenti per essere certi di non perdere nessuna coppia
+    // potenzialmente in collisione.
+    const cellSize = Math.max(1, maxRadius * 2);
+    const cellKey = (x: number, y: number, z: number) =>
+      `${Math.floor(x / cellSize)}|${Math.floor(y / cellSize)}|${Math.floor(z / cellSize)}`;
+
+    const MAX_PASSES = 40;
+    for (let pass = 0; pass < MAX_PASSES; pass++) {
+      const grid = new Map<string, PositionedNode[]>();
+      for (const n of nodes) {
+        const key = cellKey(n.x, n.y, n.z);
+        const bucket = grid.get(key);
+        if (bucket) bucket.push(n);
+        else grid.set(key, [n]);
+      }
+
+      let anyOverlap = false;
+      for (const n of nodes) {
+        const rN = collisionRadius(n);
+        const cx = Math.floor(n.x / cellSize);
+        const cy = Math.floor(n.y / cellSize);
+        const cz = Math.floor(n.z / cellSize);
+
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dz = -1; dz <= 1; dz++) {
+              const bucket = grid.get(`${cx + dx}|${cy + dy}|${cz + dz}`);
+              if (!bucket) continue;
+
+              for (const m of bucket) {
+                // Confronta ogni coppia una sola volta (id come tie-break)
+                // per non annullare da soli lo spostamento appena fatto.
+                if (m === n || m.id <= n.id) continue;
+
+                const ddx = m.x - n.x;
+                const ddy = m.y - n.y;
+                const ddz = m.z - n.z;
+                let dist = Math.hypot(ddx, ddy, ddz);
+                const minDist = rN + collisionRadius(m);
+                if (dist >= minDist) continue;
+
+                anyOverlap = true;
+                // Nodi coincidenti (dist ~ 0): direzione arbitraria ma
+                // deterministica, altrimenti non c'è verso lungo cui separarli.
+                if (dist < 1e-6) dist = 1e-6;
+                const overlap = (minDist - dist) / 2 + 0.01; // piccolo margine
+                const ux = ddx / dist;
+                const uy = ddy / dist;
+                const uz = ddz / dist;
+                m.x += ux * overlap;
+                m.y += uy * overlap;
+                m.z += uz * overlap;
+                n.x -= ux * overlap;
+                n.y -= uy * overlap;
+                n.z -= uz * overlap;
+              }
+            }
+          }
+        }
+      }
+
+      if (!anyOverlap) break;
+    }
+
+    this.graph.refresh();
   }
 
   private markGraphReady(): void {
@@ -628,7 +752,11 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   resetFilters(): void {
-    this.decadeFilter.set(new Set(this.decadesList()));
+    // Set vuoto = stato neutro (nessuna decade "spuntata" in blu): dato che
+    // computeFilterMatch considera il filtro decadi attivo solo quando
+    // 0 < size < totale, un set vuoto equivale comunque a "nessun filtro",
+    // ma visivamente lascia le checkbox sbiancate invece che tutte piene.
+    this.decadeFilter.set(new Set());
     this.selectedWorkingGroups.set(new Set());
     this.workingGroupSearch.set('');
   }
