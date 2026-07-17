@@ -327,4 +327,4 @@ Prima di decidere, vale la pena mettere a confronto le due strade, perché non �
 
 **Una via di mezzo, se può interessare come terza opzione**: automatizzare l'esecuzione ma **non** l'atomicità della pubblicazione — cioè lo scheduler scrive sempre su un file di **staging** (es. `graph_data_enriched.next.json`), e solo un comando manuale esplicito (o una verifica automatica di base, tipo "il run è terminato senza eccezioni e il JSON risultante è valido") promuove quel file a `graph_data_enriched.json`, quello effettivamente servito dal frontend. Questo darebbe l'aggiornamento automatico senza il rischio che un run fallito a metà o con dati anomali arrivi a sostituire silenziosamente il dataset in produzione.
 
-Nessuna delle tre opzioni è già stata implementata: è un punto da decidere insieme, anche in base a quanto è realistico presidiare l'esecuzione periodica nel contesto in cui gira il sistema.
+Nessuna delle tre opzioni è già stata implementata: è un punto da decidere, anche in base a quanto è realistico presidiare l'esecuzione periodica nel contesto in cui gira il sistema.
