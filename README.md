@@ -69,8 +69,8 @@ RFC-graph-visualizer/
 │   │    │   ├── models/
 │   │    │   │   └── graph.model.ts         					             # Interfacce dati condivise (nodi, archi, tipi RFC)
 │   │    │   ├── services/
-│   │    │   │    ├── draft-timeline-data.service.ts      			   # Dati per la vista timeline (solo draft/aborted)
-│   │    │   │    └── graph-data.service.ts              		       # Dati per la vista a grafo (solo RFC pubblicati)
+│   │    │   │   ├── draft-timeline-data.service.ts      			   # Dati per la vista timeline (solo draft/aborted)
+│   │    │   │   └── graph-data.service.ts              		       # Dati per la vista a grafo (solo RFC pubblicati)
 │   │    │   └──  app.config.ts / app.html / app.scss / app.ts
 │   │    ├── index.html
 │   │    ├── main.ts
