@@ -72,6 +72,28 @@
   }
 }
 
+.hover-tooltip {
+  position: absolute;
+  z-index: 7;
+  // Il tooltip segue il cursore ma non deve mai catturarne gli eventi,
+  // altrimenti mousemove/click sul canvas sottostante si interromperebbero
+  // proprio mentre il tooltip è visibile.
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 10px));
+  max-width: 280px;
+  font: 12px 'IBM Plex Mono', monospace;
+  color: #1a1a1a;
+  background: #ffffff;
+  border: 1px solid rgba(0, 114, 178, 0.35);
+  border-radius: 6px;
+  padding: 7px 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+
+  .year {
+    color: #0072b2;
+  }
+}
+
 .state-overlay {
   position: absolute;
   inset: 0;
@@ -290,7 +312,8 @@
 .filter-check {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: space-between;
+  gap: 0.6rem;
   font-size: 0.78rem;
   color: #374151;
   cursor: pointer;
@@ -299,4 +322,32 @@
     accent-color: #0072b2;
     cursor: pointer;
   }
+}
+
+.filter-check-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Conteggio RFC per working group: tondino tenue, stesso registro
+// visivo dei chip keyword già usati nel detail-panel.
+.wg-count {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
+  color: #6b7280;
+  background: #f4f5f7;
+  border: 1px solid #dfe2e8;
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+}
+
+.counter-total {
+  color: #9aa1ac;
+  margin: 0 0.15rem;
 }

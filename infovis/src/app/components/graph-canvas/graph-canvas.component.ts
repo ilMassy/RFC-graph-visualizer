@@ -141,6 +141,32 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
   private filterMatchList: string[] = [];
   readonly filterMatchIndex = signal<number | null>(null); // posizione corrente nella lista, null = nessun filtro/nessun match
 
+  /**
+   * Cache statica (per sessione applicativa, non per istanza) delle
+   * posizioni finali del layout di forza del grafo RFC. Angular distrugge
+   * e ricrea questo componente ogni volta che si esce/rientra dal menu
+   * (ngOnDestroy → ngAfterViewInit), quindi un campo di istanza andrebbe
+   * perso; un campo `static` invece sopravvive tra un'istanza e l'altra
+   * finché il JS della pagina resta in memoria, e si azzera da solo
+   * quando si esce davvero dal sistema (reload/chiusura pagina) — che è
+   * esattamente il comportamento richiesto: assestamento delle forze
+   * solo alla primissima apertura del grafo per sessione.
+   *
+   * Se il flusso di "uscita dal sistema" dell'app non ricarica la
+   * pagina (SPA che resta viva anche dopo il logout), richiamare
+   * `GraphCanvasComponent.resetSettledLayout()` da quel punto per
+   * forzare comunque un nuovo assestamento al prossimo ingresso.
+   */
+  private static settledPositions: Map<string, { x: number; y: number; z: number }> | null = null;
+
+  /** Azzera la cache del layout assestato, forzando un nuovo assestamento
+   *  delle forze al prossimo ingresso nel grafo. Da richiamare solo da un
+   *  eventuale flusso di logout/uscita dal sistema che non comporta un
+   *  reload della pagina. */
+  static resetSettledLayout(): void {
+    GraphCanvasComponent.settledPositions = null;
+  }
+
   private graph: any;
   private highlightNodes = new Set<string>();
   private highlightLinks = new Set<GraphLink>();
@@ -169,6 +195,18 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
   private selectedNodeRef: GraphNode | null = null;
   private pulseStartTime = 0;
 
+  /** Cronologia delle selezioni (focus su nodo o nessuna selezione), per la
+   *  freccia "torna indietro". Ogni voce è lo stato PRECEDENTE al momento
+   *  in cui si è passati a una nuova selezione — quindi `goBack()` la
+   *  ripristina semplicemente riapplicandola. `null` = nessun nodo
+   *  selezionato in quel punto della cronologia. */
+  private navigationHistory: (GraphNode | null)[] = [];
+  /** true mentre `goBack()` sta riapplicando uno stato precedente: evita
+   *  che quella stessa riapplicazione venga a sua volta registrata come
+   *  nuova voce di cronologia (altrimenti "indietro" non avanzerebbe mai). */
+  private isNavigatingHistory = false;
+  readonly canGoBack = signal(false);
+
   private readonly radiusFor = (impact: number): number => 22.0 + Math.max(impact, 0) * 1.4;
 
   /** Dimensione visiva del nodo: invariata se nessun filtro è attivo;
@@ -192,8 +230,21 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
       const fullData = this.graphData.graphData();
       if (!this.graph || fullData.nodes.length === 0 || this.graphDataInitialized) return;
 
+      // Se questa è una riapertura del grafo nella stessa sessione, il
+      // layout è già assestato: niente nuova simulazione da attendere.
+      const usedCachedLayout = this.applySettledLayoutIfCached(fullData.nodes);
+
       this.graph.graphData(fullData);
       this.graphDataInitialized = true;
+
+      if (usedCachedLayout) {
+        this.collisionPolishDone = true;
+        // Nodi già pinnati (fx/fy/fz): nessun tick di simulazione serve
+        // più, azzerarli risparmia calcoli inutili in background.
+        this.graph.cooldownTicks(0);
+        this.markGraphReady();
+        return;
+      }
 
       // Repulsione scalata in base al numero di nodi
       // Per compensare la spinta più forte senza
@@ -253,16 +304,28 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     // il completamento del fetch.
     await this.graphData.load(this.dataUrl);
 
-    // Una volta caricati, inizializza i dati nel grafo se non è già stato fatto.
+    // Una volta caricati, inizializza i dati nel grafo se non è già stato
+    // fatto (l'effect qui sopra potrebbe averlo già fatto nel frattempo,
+    // tipicamente quando i dati erano già in cache nel servizio da
+    // un'apertura precedente nella stessa sessione).
     const data = this.graphData.graphData();
-    if (this.graph && data.nodes.length > 0) {
+    if (this.graph && data.nodes.length > 0 && !this.graphDataInitialized) {
+        const usedCachedLayout = this.applySettledLayoutIfCached(data.nodes);
+
         this.graph.graphData(data);
-        // d3ReheatSimulation() è un metodo, non una prop: gira subito e
-        // sincrono, quindi va rimandato di un margine di sicurezza (vedi
-        // resumeAnimation in setupGraph) per lasciare al digest interno
-        // (debounced) il tempo di ricostruire state.layout per i nuovi dati.
-        setTimeout(() => this.graph?.d3ReheatSimulation(), 50);
         this.graphDataInitialized = true;
+
+        if (usedCachedLayout) {
+          this.collisionPolishDone = true;
+          this.graph.cooldownTicks(0);
+          this.markGraphReady();
+        } else {
+          // d3ReheatSimulation() è un metodo, non una prop: gira subito e
+          // sincrono, quindi va rimandato di un margine di sicurezza (vedi
+          // resumeAnimation in setupGraph) per lasciare al digest interno
+          // (debounced) il tempo di ricostruire state.layout per i nuovi dati.
+          setTimeout(() => this.graph?.d3ReheatSimulation(), 50);
+        }
     }
   }
 
@@ -360,7 +423,7 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
       .backgroundColor('#03040a')
       .showNavInfo(false)
       .nodeRelSize(1)
-      .nodeResolution(12)
+      .nodeResolution(35)
       .nodeVal((n: GraphNode) => this.nodeValFor(n))
       .nodeColor((n: GraphNode) => this.colorForNode(n))
       .nodeOpacity(1)
@@ -530,6 +593,7 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   private focusOn(node: GraphNode): void {
+    this.recordNavigationHistory();
     this.selectedNode.set(node);
 
     // Solo archi USCENTI dal nodo selezionato (source === node.id), non
@@ -571,12 +635,51 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
   }
 
   private clearFocus(): void {
+    this.recordNavigationHistory();
     this.selectedNode.set(null);
     this.highlightNodes.clear();
     this.highlightLinks.clear();
     this.refreshStyles();
 
     this.selectedNodeRef = null;
+  }
+
+  /** Salva lo stato di selezione ATTUALE (prima che venga sovrascritto) in
+   *  cima allo stack di cronologia. Non-op mentre `goBack()` sta già
+   *  riapplicando una voce precedente, altrimenti ogni passo indietro
+   *  registrerebbe subito un passo avanti che lo annulla. */
+  private recordNavigationHistory(): void {
+    if (this.isNavigatingHistory) return;
+    this.navigationHistory.push(this.selectedNodeRef);
+    this.canGoBack.set(true);
+  }
+
+  /** Freccia "torna indietro" in toolbar: ripristina l'ultima selezione
+   *  (nodo in focus, o nessuna selezione) precedente all'azione corrente. */
+  goBack(): void {
+    if (this.navigationHistory.length === 0) return;
+
+    const previous = this.navigationHistory.pop()!;
+    this.canGoBack.set(this.navigationHistory.length > 0);
+
+    this.isNavigatingHistory = true;
+    try {
+      if (previous) {
+        this.focusOn(previous);
+      } else {
+        this.clearFocus();
+      }
+    } finally {
+      this.isNavigatingHistory = false;
+    }
+  }
+
+  /** Azzera la cronologia di navigazione: usato quando un reset esplicito
+   *  (vista o uscita dal menu) rende "indietro" concettualmente privo di
+   *  senso — non c'è un'azione precedente sensata a cui tornare. */
+  private clearNavigationHistory(): void {
+    this.navigationHistory = [];
+    this.canGoBack.set(false);
   }
 
   goToMatch(step: 1 | -1): void {
@@ -616,7 +719,67 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
       this.resolveAllCollisions();
     }
 
+    this.captureSettledLayout();
     this.markGraphReady();
+  }
+
+  /** Applica (se presente) il layout già assestato in una precedente
+   *  apertura di questa sessione: assegna x/y/z e li "pinna" (fx/fy/fz,
+   *  la convenzione di d3-force per un nodo a posizione fissa) su ogni
+   *  nodo corrispondente, così la simulazione fisica non lo rimette più
+   *  in movimento. Ritorna `true` se la cache è stata applicata (nessuna
+   *  nuova simulazione necessaria).
+   *
+   *  Se il dataset non corrisponde esattamente a quello per cui la cache
+   *  era stata costruita (es. enriched.json cambiato tra una sessione e
+   *  l'altra), la cache viene scartata: un layout solo parzialmente
+   *  applicato sarebbe peggio che rifare l'assestamento da zero. */
+  private applySettledLayoutIfCached(nodes: GraphNode[]): boolean {
+    const cached = GraphCanvasComponent.settledPositions;
+    if (!cached) return false;
+
+    type PinnedNode = GraphNode & { x?: number; y?: number; z?: number; fx?: number; fy?: number; fz?: number };
+    let matched = 0;
+    for (const n of nodes as PinnedNode[]) {
+      const pos = cached.get(n.id);
+      if (!pos) continue;
+      matched++;
+      n.x = pos.x;
+      n.y = pos.y;
+      n.z = pos.z;
+      n.fx = pos.x;
+      n.fy = pos.y;
+      n.fz = pos.z;
+    }
+
+    if (matched !== nodes.length) {
+      GraphCanvasComponent.settledPositions = null;
+      return false;
+    }
+    return true;
+  }
+
+  /** Salva le posizioni finali del layout nella cache statica di
+   *  sessione, così i prossimi ingressi nel grafo (finché l'app resta
+   *  aperta) possono saltare del tutto l'assestamento delle forze.
+   *  Scatta solo la prima volta: la cache, una volta valorizzata, non va
+   *  più sovrascritta, dato che i filtri non alterano mai il layout
+   *  (vedi computeFilterMatch). */
+  private captureSettledLayout(): void {
+    if (GraphCanvasComponent.settledPositions) return;
+    if (!this.graph) return;
+
+    type PositionedNode = GraphNode & { x: number; y: number; z: number };
+    const nodes = (this.graph.graphData().nodes as PositionedNode[]).filter(
+      n => n.x != null && n.y != null && n.z != null,
+    );
+    if (nodes.length === 0) return;
+
+    const map = new Map<string, { x: number; y: number; z: number }>();
+    for (const n of nodes) {
+      map.set(n.id, { x: n.x, y: n.y, z: n.z });
+    }
+    GraphCanvasComponent.settledPositions = map;
   }
 
   /** Passaggio finale, deterministico e indipendente dalla fisica a
@@ -775,12 +938,14 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
 
   resetView(): void {
     this.clearFocus();
+    this.clearNavigationHistory();
     this.resetFilters();
     this.graph?.cameraPosition({ x: 0, y: 0, z: 550 }, { x: 0, y: 0, z: 0 }, 1200);
   }
 
   exitToMenu(): void {
     this.clearFocus();
+    this.clearNavigationHistory();
     this.resetFilters();
 
     this.graph?.cameraPosition({ x: 0, y: 0, z: 30000 }, { x: 0, y: 0, z: 0 }, 0);

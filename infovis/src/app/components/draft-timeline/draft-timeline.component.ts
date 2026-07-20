@@ -57,6 +57,13 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
   readonly totalCount = this.data.totalCount;
   readonly selectedNode = signal<RfcNode | null>(null);
   readonly filtersOpen = signal(false);
+  /** Nodo sotto il cursore in questo momento (per il tooltip in stile
+   *  graph-canvas), distinto da selectedNode che invece resta fissato
+   *  dopo un click. `null` quando il mouse non è su nessun elemento. */
+  readonly hoveredNode = signal<RfcNode | null>(null);
+  /** Posizione del tooltip in coordinate SCHERMO (relative al wrapper del
+   *  canvas), aggiornata a ogni mousemove insieme a hoveredNode. */
+  readonly hoveredPos = signal<{ x: number; y: number }>({ x: 0, y: 0 });
   readonly allWorkingGroups = signal<string[]>([]);
   readonly selectedWorkingGroups = signal<Set<string>>(new Set());
   readonly workingGroupSearch = signal('');
@@ -65,6 +72,21 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
     const all = this.allWorkingGroups();
     if (!query) return all;
     return all.filter(wg => wg.toLowerCase().includes(query));
+  });
+  /** Numero di RFC per ciascun working group (chiave = working_group,
+   *  oppure NO_WORKING_GROUP per i nodi senza gruppo), usato per mostrare
+   *  il conteggio accanto a ogni voce del filtro. */
+  readonly workingGroupCounts = signal<Map<string, number>>(new Map());
+  /** Numero di RFC effettivamente coperti dal filtro attivo: somma dei
+   *  conteggi dei working group selezionati, o totalCount() se nessun
+   *  filtro è attivo. */
+  readonly filteredCount = computed(() => {
+    const selected = this.selectedWorkingGroups();
+    if (selected.size === 0) return this.totalCount();
+    const counts = this.workingGroupCounts();
+    let sum = 0;
+    for (const wg of selected) sum += counts.get(wg) ?? 0;
+    return sum;
   });
 
   // Palette Okabe-Ito: blu e vermiglio, distinguibili anche sotto le
@@ -98,6 +120,7 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
     this.years = this.data.years();
     this.hasNoYear = this.data.hasNoYearBucket();
     this.allWorkingGroups.set(this.data.allWorkingGroups());
+    this.workingGroupCounts.set(this.computeWorkingGroupCounts());
 
     const initialWorldX = this.xForYearIndex(this.years.length - 1);
     this.zoomTransform = d3.zoomIdentity.translate(this.width / 2 - initialWorldX, this.height - 60);
@@ -115,11 +138,13 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
       .scaleExtent([0.02, 3])
       .on('zoom', (event: d3.D3ZoomEvent<HTMLCanvasElement, unknown>) => {
         this.zoomTransform = event.transform;
+        this.hoveredNode.set(null);
         this.draw();
       });
     canvas.call(zoom);
     canvas.on('click', (event: MouseEvent) => this.handleClick(event));
     canvas.on('mousemove', (event: MouseEvent) => this.handleHover(event));
+    canvas.on('mouseleave', () => this.hoveredNode.set(null));
   }
 
   private observeResize(): void {
@@ -218,6 +243,26 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** Scorre tutti i bucket (anni + eventuale "n.d.") una sola volta, alla
+   *  fine del caricamento, e conta quanti RFC appartengono a ciascun
+   *  working group — stessa logica di fallback usata in drawColumn per
+   *  determinare a quale gruppo appartiene un nodo. */
+  private computeWorkingGroupCounts(): Map<string, number> {
+    const counts = new Map<string, number>();
+    const buckets: (number | null)[] = [...this.years];
+    if (this.hasNoYear) buckets.push(null);
+
+    for (const year of buckets) {
+      for (const id of this.data.idsForYear(year)) {
+        const node = this.data.getNode(id);
+        if (!node) continue;
+        const wg = node.working_group ?? NO_WORKING_GROUP;
+        counts.set(wg, (counts.get(wg) ?? 0) + 1);
+      }
+    }
+    return counts;
+  }
+
   private hitTest(screenX: number, screenY: number): RfcNode | null {
     const [worldX, worldY] = this.toWorld(screenX, screenY);
 
@@ -265,8 +310,20 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
 
   private handleHover(event: MouseEvent): void {
     const rect = this.canvasRef.nativeElement.getBoundingClientRect();
-    const node = this.hitTest(event.clientX - rect.left, event.clientY - rect.top);
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const node = this.hitTest(x, y);
     this.canvasRef.nativeElement.style.cursor = node ? 'pointer' : 'grab';
+
+    if (node) {
+      this.hoveredPos.set({ x, y });
+      // Evita di riassegnare lo stesso riferimento a ogni pixel di
+      // movimento del mouse: manterrebbe il tooltip identico ma
+      // rifarebbe comunque girare i computed/effect a valle inutilmente.
+      if (this.hoveredNode() !== node) this.hoveredNode.set(node);
+    } else if (this.hoveredNode() !== null) {
+      this.hoveredNode.set(null);
+    }
   }
 
   docUrl(node: RfcNode): string | null {

@@ -9,7 +9,13 @@
       Trascina per scorrere nel tempo (sinistra = più vecchio, destra = più recente) · rotella per zoom ·
       in ogni pila, i documenti sono ordinati <strong>alfabeticamente dal basso verso l'alto</strong>
     </span>
-    <span class="counter">{{ totalCount() }} documenti</span>
+    <span class="counter">
+      {{ filteredCount() }}
+      @if (selectedWorkingGroups().size > 0) {
+        <span class="counter-total">/ {{ totalCount() }}</span>
+      }
+      documenti
+    </span>
   </div>
 
   @if (filtersOpen()) {
@@ -24,13 +30,19 @@
       />
       <div class="wg-list">
         <label class="filter-check">
-          <input type="checkbox" [checked]="selectedWorkingGroups().size === 0" (change)="clearWorkingGroupSelection()" />
-          Mostra tutti
+          <span class="filter-check-label">
+            <input type="checkbox" [checked]="selectedWorkingGroups().size === 0" (change)="clearWorkingGroupSelection()" />
+            Mostra tutti
+          </span>
+          <span class="wg-count">{{ totalCount() }}</span>
         </label>
         @for (wg of filteredWorkingGroups(); track wg) {
           <label class="filter-check">
-            <input type="checkbox" [checked]="selectedWorkingGroups().has(wg)" (change)="toggleWorkingGroup(wg)" />
-            {{ wg }}
+            <span class="filter-check-label">
+              <input type="checkbox" [checked]="selectedWorkingGroups().has(wg)" (change)="toggleWorkingGroup(wg)" />
+              {{ wg }}
+            </span>
+            <span class="wg-count">{{ workingGroupCounts().get(wg) ?? 0 }}</span>
           </label>
         }
       </div>
@@ -51,6 +63,12 @@
     }
 
     <canvas #canvasEl></canvas>
+
+    @if (hoveredNode(); as hn) {
+      <div class="hover-tooltip" [style.left.px]="hoveredPos().x" [style.top.px]="hoveredPos().y">
+        <strong>{{ hn.id }}</strong> <span class="year">· {{ hn.year ?? 'n.d.' }}</span><br />{{ hn.title }}
+      </div>
+    }
 
     <div class="legend">
       <div class="legend-item"><span class="swatch" [style.background]="draftColor"></span>Internet-Draft</div>

@@ -14,6 +14,15 @@
       ← Menu
     </button>
     <button type="button" class="reset-btn" (click)="resetView()">⟲ Reset vista</button>
+    <button
+      type="button"
+      class="back-action-btn"
+      [disabled]="!canGoBack()"
+      (click)="goBack()"
+      title="Torna alla selezione precedente"
+    >
+      ← Indietro
+    </button>
     <button type="button" class="filter-btn" [class.active]="filtersOpen()" (click)="toggleFiltersPanel()">
       ⚙ Filtri @if (filtersActive()) { <span class="filter-dot"></span> }
     </button>
