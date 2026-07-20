@@ -49,9 +49,9 @@ Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggio
  
 *Vista a grafo 3D: nodi RFC filtrabili per decade e working group, con il pannello di dettaglio del documento selezionato.*
  
-![Timeline con filtro per working group e conteggi](docs/Progetto_Infovis/img/timeline-filtro-wg-conteggi.png)
+![Timeline con filtro per working group e conteggi](docs/Progetto_Infovis/img/timeline-dettaglio-dei-draft.png)
  
-*Vista timeline draft/aborted: istogramma temporale filtrabile per working group, con conteggi e dettaglio del draft selezionato.*
+*Vista timeline draft/aborted: istogramma temporale filtrabile per working group, dettaglio del draft selezionato.*
 
 
 ## Struttura del repository
