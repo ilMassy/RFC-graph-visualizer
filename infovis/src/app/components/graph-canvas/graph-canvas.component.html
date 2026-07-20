@@ -140,6 +140,38 @@
           <dt>Updates / Obsoletes</dt><dd>{{ node.n_updates }} / {{ node.n_obsoletes }}</dd>
         </dl>
 
+        @if (selectedNodeUpdates().length > 0) {
+          <div class="relation-group">
+            <span class="relation-title">Aggiorna</span>
+            <ul class="relation-list">
+              @for (rfc of selectedNodeUpdates(); track rfc.id) {
+                <li>
+                  <button type="button" class="relation-item" (click)="selectRelatedNode(rfc.id)">
+                    <span class="relation-id">{{ rfc.id }}</span>
+                    <span class="relation-rfc-title">{{ rfc.title }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
+        @if (selectedNodeObsoletes().length > 0) {
+          <div class="relation-group">
+            <span class="relation-title">Rende obsoleti</span>
+            <ul class="relation-list">
+              @for (rfc of selectedNodeObsoletes(); track rfc.id) {
+                <li>
+                  <button type="button" class="relation-item" (click)="selectRelatedNode(rfc.id)">
+                    <span class="relation-id">{{ rfc.id }}</span>
+                    <span class="relation-rfc-title">{{ rfc.title }}</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+
         @if (node.keywords && node.keywords.length > 0) {
           <div class="keywords">
             @for (kw of node.keywords; track kw) {

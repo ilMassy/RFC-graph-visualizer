@@ -77,6 +77,16 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
   readonly minYear = this.graphData.minYear;
   readonly maxYear = this.graphData.maxYear;
   readonly selectedNode = signal<GraphNode | null>(null);
+  /** RFC aggiornati dal nodo selezionato (link uscenti di tipo "Updates"),
+   *  mostrati nel pannello di dettaglio come voci cliccabili. */
+  readonly selectedNodeUpdates = computed<GraphNode[]>(() =>
+    this.relatedNodesFor(this.selectedNode(), 'Updates'),
+  );
+  /** RFC resi obsoleti dal nodo selezionato (link uscenti di tipo
+   *  "Obsoletes"), mostrati nel pannello di dettaglio come voci cliccabili. */
+  readonly selectedNodeObsoletes = computed<GraphNode[]>(() =>
+    this.relatedNodesFor(this.selectedNode(), 'Obsoletes'),
+  );
   readonly filtersOpen = signal(false);
   /** Overlay dei comandi mouse: visibile alla prima apertura, richiudibile
    *  e riapribile in qualunque momento dal pulsante "?" in toolbar. */
@@ -891,6 +901,34 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
 
   docUrl(node: GraphNode): string | null {
     return resolveDocUrl(node);
+  }
+
+  /** Nodi raggiunti da un link USCENTE dal nodo dato, del tipo richiesto
+   *  ('Updates' o 'Obsoletes'). Usato per popolare le liste cliccabili nel
+   *  pannello di dettaglio (selectedNodeUpdates / selectedNodeObsoletes). */
+  private relatedNodesFor(node: GraphNode | null, type: 'Updates' | 'Obsoletes'): GraphNode[] {
+    if (!node) return [];
+    const fullData = this.graphData.graphData();
+    const targetIds: string[] = [];
+    for (const l of fullData.links) {
+      if (l.type !== type) continue;
+      const sourceId = typeof l.source === 'string' ? l.source : l.source.id;
+      if (sourceId !== node.id) continue;
+      const targetId = typeof l.target === 'string' ? l.target : l.target.id;
+      targetIds.push(targetId);
+    }
+    return targetIds
+      .map(id => this.graphData.getNode(id))
+      .filter((n): n is GraphNode => !!n);
+  }
+
+  /** Click su un RFC elencato nel pannello di dettaglio (aggiornati /
+   *  resi obsoleti dal nodo corrente): sposta il focus su quel nodo,
+   *  riusando la stessa logica di selezione/camera/cronologia del click
+   *  diretto sul grafo. */
+  selectRelatedNode(id: string): void {
+    const node = this.graphData.getNode(id);
+    if (node) this.focusOn(node);
   }
 
   toggleDecade(decade: number): void {

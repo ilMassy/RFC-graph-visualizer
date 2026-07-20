@@ -339,6 +339,70 @@
   }
 }
 
+.relation-group {
+  margin: 0 0 0.8rem;
+
+  &:last-of-type {
+    margin-bottom: 0.8rem;
+  }
+}
+
+.relation-title {
+  display: block;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9aa5bd;
+  margin-bottom: 0.3rem;
+}
+
+.relation-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.relation-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    background: rgba(86, 180, 233, 0.16);
+    border-color: rgba(86, 180, 233, 0.45);
+  }
+}
+
+.relation-id {
+  flex-shrink: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: #56B4E9;
+}
+
+.relation-rfc-title {
+  font-size: 0.72rem;
+  color: #d6dceb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .keywords {
   display: flex;
   flex-wrap: wrap;
