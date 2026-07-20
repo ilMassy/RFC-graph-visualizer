@@ -2,7 +2,7 @@
 
 Questo progetto è stato generato con [Angular CLI](https://github.com/angular/angular-cli) versione 22.0.5.
 
-> Per la descrizione del progetto, l'architettura complessiva e i comandi per rigenerare i dati della pipeline, vedi il [README principale del repository](../README.md).
+> Per la descrizione del progetto, l'architettura complessiva e i comandi per rigenerare i dati della pipeline, più altri comandi consigliati, vedi il [README principale del repository](../README.md).
 
 ## Server di sviluppo
 

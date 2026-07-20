@@ -44,25 +44,15 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggiorna ad ogni "tick" della simulazione o ad ogni interazione di zoom/pan.
 
 ## Anteprima
+ 
+![Grafo 3D con filtri per decade e working group](../docs/Progetto_Infovis/img/grafo-filtri-decade-wg.png)
+ 
+*Vista a grafo 3D: nodi RFC filtrabili per decade e working group, con il pannello di dettaglio del documento selezionato.*
+ 
+![Timeline con filtro per working group e conteggi](../docs/Progetto_Infovis/img/timeline-filtro-wg-conteggi.png)
+ 
+*Vista timeline draft/aborted: istogramma temporale filtrabile per working group, con conteggi e dettaglio del draft selezionato.*
 
-<table>
-<tr>
-<td width="50%">
-
-**Vista a grafo 3D** — nodi RFC filtrabili per decade e working group, dettaglio del documento selezionato a destra.
-
-<img src="docs/Progetto-Infovis/img/grafo-filtri-decade-wg.png" alt="Grafo 3D con filtri per decade e working group" width="100%" />
-
-</td>
-<td width="50%">
-
-**Timeline draft/aborted** — istogramma temporale filtrabile per working group, dettaglio del draft selezionato a destra.
-
-<img src="docs/Progetto-Infovis/img/timeline-filtro-wg-conteggi.png" alt="Timeline con filtro per working group e conteggi" width="100%" />
-
-</td>
-</tr>
-</table>
 
 ## Struttura del repository
 
