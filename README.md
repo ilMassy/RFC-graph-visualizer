@@ -68,9 +68,9 @@ RFC-graph-visualizer/
 │   │   │   ├── aggiornamenti_e_proposte_1.md                            # Aggiornamenti sullo stato del progetto e proposte sul design del grafo (versione 1)
 │   │   │   └── aggiornamenti_e_proposte_2.md                            # Aggiornamenti: frontend Angular implementato, nuovo script di enrichment draft, proposta sull'automazione della pipeline (versione 2)
 │   │   └── img/                                                         
-│   │       ├── grafo-overview-completo.png                              # Vista d'insieme del grafo 3D completo (~9.794 RFC pubblicati renderizzati con WebGL)
-│   │       ├── grafo-filtri-decade-wg.png                               # Pannello dei filtri avanzati per decade e ricerca testuale del Working Group ("idr")
 │   │       ├── grafo-dettaglio-rfc1035.png                              # Pannello di dettaglio e focus sul nodo RFC1035 con evidenziazione dei vicini uscenti
+│   │       ├── grafo-filtri-decade-wg.png                               # Pannello dei filtri avanzati per decade e ricerca testuale del Working Group ("idr")
+│   │       ├── grafo-overview-completo.png                              # Vista d'insieme del grafo 3D completo (~9.794 RFC pubblicati renderizzati con WebGL)
 │   │       ├── timeline-dettaglio-draft.png                             # Vista dell'istogramma temporale 2D per i draft, con selezione del documento e box esplicativo
 │   │       └── timeline-filtro-wg-conteggi.png                          # Vista timeline filtrata sul Working Group "idr" con conteggi dinamici per gruppo
 │   └── comandi_per_testare.md                                           # Comandi per clonare il repo, testare entrambi gli script della pipeline e avviare il frontend
