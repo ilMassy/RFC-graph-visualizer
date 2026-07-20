@@ -43,6 +43,27 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 
 Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggiorna ad ogni "tick" della simulazione o ad ogni interazione di zoom/pan.
 
+## Anteprima
+
+<table>
+<tr>
+<td width="50%">
+
+**Vista a grafo 3D** — nodi RFC filtrabili per decade e working group, dettaglio del documento selezionato a destra.
+
+<img src="docs/Progetto-Infovis/img/grafo-filtri-decade-wg.png" alt="Grafo 3D con filtri per decade e working group" width="100%" />
+
+</td>
+<td width="50%">
+
+**Timeline draft/aborted** — istogramma temporale filtrabile per working group, dettaglio del draft selezionato a destra.
+
+<img src="docs/Progetto-Infovis/img/timeline-filtro-wg-conteggi.png" alt="Timeline con filtro per working group e conteggi" width="100%" />
+
+</td>
+</tr>
+</table>
+
 ## Struttura del repository
 
 ```
@@ -109,7 +130,7 @@ Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`
 2. Creare il virtualenv Python e lanciare `rfc_pipeline.py` (fasi `parse` + `enrich`).
 3. Lanciare `draft_metadata_enricher.py` per completare i campi mancanti sui draft.
 4. Copiare `graph_data_enriched.json` nella cartella dati del frontend (`infovis/public/data/`).
-5. Fare la build di Angular (`npx ng build`) e servire la cartella generata.
+5. Fare la build di Angular (`npx ng build`) e servire la cartella generata — per i comandi e le opzioni del frontend Angular vedi anche il [README di `infovis/`](infovis/README.md).
 
 I comandi di test dettagliati per entrambi gli script, oltre ai comandi per l'avvio del frontend, sono in [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md).
 
@@ -123,6 +144,12 @@ unzip graph_data_enriched.zip -d infovis/public/data/
 ```
 
 ⚠️ Il dataset scaricato riflette lo stato delle fonti IETF al momento della generazione (vedi il campo `meta.generated_at` dentro il JSON) — per dati aggiornati, va comunque rilanciata la pipeline.
+
+## Aggiornamenti e proposte
+
+Lo stato di avanzamento del progetto e le proposte è tracciato nel documento:
+
+- [`docs/Progetto_Infovis/aggiornamenti_e_proposte/aggiornamenti_e_proposte_2.md`](docs/Progetto_Infovis/aggiornamenti_e_proposte/aggiornamenti_e_proposte_2.md) — versione 2: frontend Angular implementato, nuovo script di enrichment per i draft, proposta sull'automazione della pipeline.
 
 ## Riferimenti
 
