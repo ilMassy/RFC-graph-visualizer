@@ -433,7 +433,7 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
       .backgroundColor('#03040a')
       .showNavInfo(false)
       .nodeRelSize(1)
-      .nodeResolution(35)
+      .nodeResolution(20)
       .nodeVal((n: GraphNode) => this.nodeValFor(n))
       .nodeColor((n: GraphNode) => this.colorForNode(n))
       .nodeOpacity(1)
