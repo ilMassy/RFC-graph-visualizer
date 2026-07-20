@@ -59,40 +59,46 @@ Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggio
 ```
 RFC-graph-visualizer/
 ├── backend/
-│   ├── draft_metadata_enricher.py               				          # Secondo passaggio dopo rfc_pipeline.py, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
-│   ├── rfc_pipeline.py                          				          # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (due sotto-comandi: parse, enrich)
-│   └── sample_rfc_index.xml                     				          # Indice RFC di esempio, ridotto, per test rapidi della fase `parse` senza scaricare il dataset reale
+│   ├── draft_metadata_enricher.py                                       # Secondo passaggio dopo rfc_pipeline.py, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
+│   ├── rfc_pipeline.py                                                  # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (due sotto-comandi: parse, enrich)
+│   └── sample_rfc_index.xml                                             # Indice RFC di esempio, ridotto, per test rapidi della fase `parse` senza scaricare il dataset reale
 ├── docs/
 │   ├── Progetto_Infovis/
-│   │     └── aggiornamenti_e_proposte/
-│   │         ├── aggiornamenti_e_proposte_1.md    			          # Aggiornamenti sullo stato del progetto e proposte sul design del grafo (versione 1)
-│   │         └── aggiornamenti_e_proposte_2.md    	              # Aggiornamenti: frontend Angular implementato, nuovo script di enrichment draft, proposta sull'automazione della pipeline (versione 2)
-│   └── comandi_per_testare.md                  				          # Comandi per clonare il repo, testare entrambi gli script della pipeline e avviare il frontend
-├── infovis/                                      			          # Frontend Angular standalone
+│   │   ├── aggiornamenti_e_proposte/
+│   │   │   ├── aggiornamenti_e_proposte_1.md                            # Aggiornamenti sullo stato del progetto e proposte sul design del grafo (versione 1)
+│   │   │   └── aggiornamenti_e_proposte_2.md                            # Aggiornamenti: frontend Angular implementato, nuovo script di enrichment draft, proposta sull'automazione della pipeline (versione 2)
+│   │   └── img/                                                         
+│   │       ├── grafo-overview-completo.png                              # Vista d'insieme del grafo 3D completo (~9.794 RFC pubblicati renderizzati con WebGL)
+│   │       ├── grafo-filtri-decade-wg.png                               # Pannello dei filtri avanzati per decade e ricerca testuale del Working Group ("idr")
+│   │       ├── grafo-dettaglio-rfc1035.png                              # Pannello di dettaglio e focus sul nodo RFC1035 con evidenziazione dei vicini uscenti
+│   │       ├── timeline-dettaglio-draft.png                             # Vista dell'istogramma temporale 2D per i draft, con selezione del documento e box esplicativo
+│   │       └── timeline-filtro-wg-conteggi.png                          # Vista timeline filtrata sul Working Group "idr" con conteggi dinamici per gruppo
+│   └── comandi_per_testare.md                                           # Comandi per clonare il repo, testare entrambi gli script della pipeline e avviare il frontend
+├── infovis/                                                             # Frontend Angular standalone
 │   ├── public/
 │   │   └── favicon.ico
 │   ├── src/
-│   │    ├── app/
-│   │    │   ├── components/
-│   │    │   │   ├── draft-timeline/        					             # Istogramma temporale per draft/aborted (canvas 2D + d3-zoom)
-│   │    │   │   ├── graph-canvas/          					             # Grafo 3D degli RFC pubblicati (D3 + force simulation)
-│   │    │   │   └── landing-menu/          					             # Menu iniziale: scelta tra le due viste
-│   │    │   ├── models/
-│   │    │   │   └── graph.model.ts         					             # Interfacce dati condivise (nodi, archi, tipi RFC)
-│   │    │   ├── services/
-│   │    │   │   ├── draft-timeline-data.service.ts      			   # Dati per la vista timeline (solo draft/aborted)
-│   │    │   │   └── graph-data.service.ts              		       # Dati per la vista a grafo (solo RFC pubblicati)
-│   │    │   └──  app.config.ts / app.html / app.scss / app.ts
-│   │    ├── index.html
-│   │    ├── main.ts
-│   │    └── styles.scss
+│   │   ├── app/
+│   │   │   ├── components/
+│   │   │   │   ├── draft-timeline/                                      # Istogramma temporale per draft/aborted (canvas 2D + d3-zoom)
+│   │   │   │   ├── graph-canvas/                                        # Grafo 3D degli RFC pubblicati (D3 + force simulation)
+│   │   │   │   └── landing-menu/                                        # Menu iniziale: scelta tra le due viste
+│   │   │   ├── models/
+│   │   │   │   └── graph.model.ts                                       # Interfacce dati condivise (nodi, archi, tipi RFC)
+│   │   │   ├── services/
+│   │   │   │   ├── draft-timeline-data.service.ts                       # Dati per la vista timeline (solo draft/aborted)
+│   │   │   │   └── graph-data.service.ts                                # Dati per la vista a grafo (solo RFC pubblicati)
+│   │   │   └──  app.config.ts / app.html / app.scss / app.ts
+│   │   ├── index.html
+│   │   ├── main.ts
+│   │   └── styles.scss
 │   ├── angular.json
 │   ├── package-lock.json
 │   ├── package.json
 │   └── tsconfig.app.json / tsconfig.json / tsconfig.spec.json
-├── .gitignore                                   				            # Regole di esclusione: cache/stato pipeline, output JSON generati, ambiente Python, Angular
-├── README.md                                    				            # Questo file
-└── requirements.txt                             				            # Dipendenze Python (nessuna esterna: solo libreria standard)
+├── .gitignore                                                           # Regole di esclusione: cache/stato pipeline, output JSON generati, ambiente Python, Angular
+├── README.md                                                            # Questo file
+└── requirements.txt                                                     # Dipendenze Python (nessuna esterna: solo libreria standard)
 ```
 
 ### `backend/rfc_pipeline.py`
