@@ -324,7 +324,7 @@ Non essendoci una libreria di scene-graph (a differenza del grafo 3D), l'hit-tes
 
 ![Vista timeline filtrata sul working group "idr", con conteggi per gruppo](../img/timeline-filtro-wg-conteggi.png)
 
-*Filtro working group con ricerca testuale "idr": accanto a ogni voce compare il conteggio dei documenti di quel gruppo (`cidrd 1`, `idr 257`, `sidr 18`, `sidrops 42`), e il contatore in toolbar mostra "257 / 34617 documenti".*
+*Filtro working group con ricerca testuale "idr": accanto a ogni voce compare il conteggio dei documenti di quel gruppo (`cidrd 1`, `idr 257`, `sidr 18`, `sidrops 42`), e il contatore in toolbar mostra "257 su 34617 documenti".*
 
 ### 9.4 Ricerca draft per id, titolo, working group o parola chiave
 
