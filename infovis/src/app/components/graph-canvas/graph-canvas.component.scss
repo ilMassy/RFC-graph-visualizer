@@ -110,6 +110,119 @@
   box-shadow: 0 0 6px #ffc400;
 }
 
+.rfc-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.rfc-search-input {
+  width: 220px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(86, 180, 233, 0.35);
+  border-radius: 6px;
+  padding: 0.35rem 1.8rem 0.35rem 0.7rem;
+  font-size: 0.82rem;
+  color: #f4f7ff;
+  outline: none;
+  transition: border-color 0.15s ease, width 0.15s ease;
+
+  &:focus {
+    border-color: rgba(86, 180, 233, 0.7);
+    width: 260px;
+  }
+
+  &::placeholder {
+    color: #6b7688;
+  }
+}
+
+.rfc-search-clear {
+  position: absolute;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  color: #6b7688;
+  font-size: 0.75rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.2rem;
+
+  &:hover {
+    color: #f4f7ff;
+  }
+}
+
+.rfc-search-results {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  width: 340px;
+  max-height: 280px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem;
+  background: rgba(6, 8, 16, 0.96);
+  border: 1px solid rgba(86, 180, 233, 0.25);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  z-index: 9;
+}
+
+.rfc-search-result {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  width: 100%;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:hover,
+  &.is-highlighted {
+    background: rgba(86, 180, 233, 0.16);
+    border-color: rgba(86, 180, 233, 0.45);
+  }
+}
+
+.rfc-search-result-id {
+  flex-shrink: 0;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: #56B4E9;
+}
+
+.rfc-search-result-title {
+  font-size: 0.75rem;
+  color: #d6dceb;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rfc-search-empty {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  width: 340px;
+  background: rgba(6, 8, 16, 0.96);
+  border: 1px solid rgba(86, 180, 233, 0.25);
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.75rem;
+  color: #6b7688;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  z-index: 9;
+}
+
 .counter {
   font-variant-numeric: tabular-nums;
   color: #9aa5bd;

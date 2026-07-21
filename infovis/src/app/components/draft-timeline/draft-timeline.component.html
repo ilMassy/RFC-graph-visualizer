@@ -2,9 +2,47 @@
 
   <div class="toolbar">
     <button type="button" class="back-btn" (click)="exit.emit()">← Menu</button>
+
+    <div class="draft-search">
+      <input
+        type="text"
+        class="draft-search-input"
+        placeholder="Cerca un draft (id, titolo, keyword…)"
+        [value]="draftSearchQuery()"
+        [disabled]="!loaded()"
+        (input)="onDraftSearchInput($event)"
+        (keydown)="onDraftSearchKeydown($event)"
+        (focus)="onDraftSearchFocus()"
+        (blur)="onDraftSearchBlur()"
+      />
+      @if (draftSearchQuery().length > 0) {
+        <button type="button" class="draft-search-clear" title="Cancella ricerca" (mousedown)="$event.preventDefault(); clearDraftSearch()">✕</button>
+      }
+      @if (draftSearchFocused() && draftSearchQuery().trim().length > 0) {
+        <div class="draft-search-results">
+          @if (draftSearchResults().length === 0) {
+            <div class="draft-search-empty">Nessun draft corrisponde</div>
+          } @else {
+            @for (entry of draftSearchResults(); track entry.node.id; let i = $index) {
+              <button
+                type="button"
+                class="draft-search-item"
+                [class.active]="i === activeResultIndex()"
+                (mousedown)="$event.preventDefault(); selectSearchResult(entry)"
+              >
+                <span class="draft-search-id">{{ entry.node.id }}</span>
+                <span class="draft-search-title">{{ entry.node.title }}</span>
+              </button>
+            }
+          }
+        </div>
+      }
+    </div>
+
     <button type="button" class="filter-btn" [class.active]="filtersOpen()" (click)="toggleFiltersPanel()">
       ⚙ Working group @if (selectedWorkingGroups().size > 0) { <span class="filter-dot"></span> }
     </button>
+
     <span class="hint">
       Trascina per scorrere nel tempo (sinistra = più vecchio, destra = più recente) · rotella per zoom ·
       in ogni pila, i documenti sono ordinati <strong>alfabeticamente dal basso verso l'alto</strong>

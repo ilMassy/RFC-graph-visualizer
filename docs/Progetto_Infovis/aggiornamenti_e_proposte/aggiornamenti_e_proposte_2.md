@@ -6,8 +6,18 @@
 
 ---
 
+## 0. A chi è rivolto il sistema
+
+Il sistema è pensato per due profili di utente distinti, con esigenze diverse a cui le due viste (punti 5–9) e le rispettive funzioni di ricerca/filtro rispondono in modo complementare:
+
+- **Chi lavora dentro l'IETF e vuole studiare lo stato dell'arte degli RFC**: quanti documenti esistono, come si sono succeduti nel tempo, quali sono stati storicamente i più rilevanti (`impact_score`, punto 8.1) e come si relazionano tra loro (Updates/Obsoletes). Per questo profilo la vista a grafo 3D (punto 8), con tutti i ~9.794 RFC pubblicati sempre visibili fin dall'apertura (nessun Core Backbone, punto 11), il filtro per decade (punto 8.4) e il pannello di dettaglio con l'elenco cliccabile dei documenti aggiornati/resi obsoleti (punto 8.5), è pensata per dare una visione d'insieme e una cronistoria navigabile, non solo il singolo documento.
+- **Chi consulta gli RFC per un interesse specifico, ad esempio un ricercatore universitario**: parte da un argomento o da un documento noto, non da una visione d'insieme. Per questo profilo contano soprattutto la ricerca testuale per id/titolo/parola chiave (punti 8.7 e 9.5), il filtro per working group con conteggi (punti 8.4 e 9.5), le keyword e l'abstract nel pannello di dettaglio (punto 2.2), e la vista timeline separata sui draft/aborted (punto 9) per seguire anche le proposte non ancora diventate RFC su un certo argomento.
+
+---
+
 ## Indice
 
+0. [A chi è rivolto il sistema](#0-a-chi-è-rivolto-il-sistema)
 1. [Backend: nuovo script `draft_metadata_enricher.py`](#1-backend-nuovo-script-draft_metadata_enricherpy)
 2. [Struttura del JSON — ogni campo, e se è sempre presente](#2-struttura-del-json--ogni-campo-e-se-è-sempre-presente)
 3. [Il problema degli "n.d." nell'istogramma draft](#3-il-problema-degli-nd-nellistogramma-draft)
@@ -273,6 +283,16 @@ Altri dettagli di interazione:
 
 Palette **Okabe-Ito** (colorblind-safe) per il layer del nodo (`Application`/`Transport`/`Network`/`Unclassified`) e per il tipo di arco (`Obsoletes`/`Updates`), con spessore della linea diverso oltre che colore — coerentemente con la scelta di non affidarsi a un unico canale visivo. Il dimming da focus ha priorità su quello da filtro: se è attivo un focus (nodo selezionato), l'attenuazione dei filtri passa in secondo piano.
 
+### 8.7 Ricerca RFC per numero o titolo
+
+Oltre ai filtri per decade e working group (punto 8.4), che attenuano senza mai nascondere nulla, la toolbar offre una barra di ricerca testuale pensata per un uso complementare: saltare direttamente a un RFC specifico di cui si conosce (anche solo in parte) il numero o il titolo, senza doverlo individuare a occhio nel grafo.
+
+- **Normalizzazione tollerante dell'id** (`normalizeRfcQuery`): la query viene ripulita da eventuali prefissi `RFC`/spazi e da zeri iniziali, così `"RFC 0793"`, `"rfc793"` e `"793"` risolvono tutte allo stesso documento.
+- **Risultati ordinati per rilevanza** (`rfcSearchResults`, un `computed` che scorre l'intero dataset caricato): match esatto sull'id (punteggio migliore), poi id che inizia con la query, poi id che la contiene, infine titolo che la contiene; a parità di punteggio vince il nodo con `impact_score` più alto (punto 8.1). L'elenco è troncato alle prime 8 voci per restare leggibile come dropdown.
+- **Navigazione da tastiera**: le frecce su/giù scorrono `rfcSearchHighlightIndex` in modo circolare tra i risultati, Invio seleziona la voce evidenziata, Esc chiude il dropdown e svuota la query.
+- **Selezione di un risultato** (`selectSearchResult`) richiama `selectRelatedNode()` — la stessa funzione usata dai link Updates/Obsoletes nel pannello di dettaglio (punto 8.5) — quindi entra in `focusOn()`: camera, evidenziazione dei vicini e cronologia di navigazione si comportano esattamente come un click diretto sul nodo nel grafo.
+- **Non è un filtro**: a differenza del pannello filtri (punto 8.4), la ricerca non attenua né evidenzia nient'altro nel grafo — è solo un collegamento diretto a un nodo, e si chiude subito dopo la selezione (`clearRfcSearch`).
+
 ---
 
 ## 9. `DraftTimelineComponent` — l'istogramma temporale, la UX nel dettaglio
@@ -306,7 +326,16 @@ Non essendoci una libreria di scene-graph (a differenza del grafo 3D), l'hit-tes
 
 *Filtro working group con ricerca testuale "idr": accanto a ogni voce compare il conteggio dei documenti di quel gruppo (`cidrd 1`, `idr 257`, `sidr 18`, `sidrops 42`), e il contatore in toolbar mostra "257 / 34617 documenti".*
 
-### 9.4 Colori, filtri e pannello di dettaglio
+### 9.4 Ricerca draft per id, titolo, working group o parola chiave
+
+Analogamente al grafo 3D (punto 8.7), anche la vista timeline offre una barra di ricerca in toolbar, con una logica di indicizzazione diversa perché qui l'unità da localizzare non è un nodo dentro un grafo di relazioni, ma un elemento dentro una pila alfabetica all'interno di una colonna-anno (punto 9.1).
+
+- **Indice costruito una sola volta a fine caricamento** (`buildSearchIndex`), scorrendo gli stessi bucket già ordinati dal servizio dati (punto 7): per ogni draft memorizza la posizione (colonna-anno + indice nella pila) insieme a un testo concatenato — id, titolo, working group, status, abstract e keyword — usato per il match, così la ricerca a runtime non deve mai ripercorrere l'intero dataset da capo.
+- **Query a più token, semantica AND**: la stringa digitata viene spezzata in token; una voce entra in classifica solo se **ogni** token compare da qualche parte nel testo concatenato, altrimenti è esclusa a prescindere dal punteggio.
+- **Punteggio pesato per campo** (`scoreEntry`): un token che coincide esattamente con l'id pesa più di un id che inizia per quel token, che pesa più di un id che lo contiene, seguito da titolo che inizia/contiene il token, con un punteggio minimo residuo per un match che ricade solo su working group/status/abstract/keyword — così digitare ad esempio `"draft-ietf-tls"` porta in cima il documento giusto anche se la stessa stringa compare altrove nel testo indicizzato. Risultati troncati alle prime voci consentite (`MAX_SEARCH_RESULTS`).
+- **Selezione di un risultato** richiama `centerOnNode()`: sposta la vista (pan/zoom su `d3.zoom`, punto 9.2) fino a centrare l'elemento nella sua colonna-anno e pila, lo marca come nodo selezionato e apre il pannello di dettaglio — coerente con l'idea che la ricerca è un collegamento diretto a un documento, non un filtro come quello per working group (punto 9.5 successivo).
+
+### 9.5 Colori, filtri e pannello di dettaglio
 
 - **Palette Okabe-Ito** anche qui: blu `#0072B2` per Internet-Draft attivi/scaduti, vermiglio `#D55E00` per draft abortiti/sostituiti — stessa logica di accessibilità del grafo 3D, con gli stessi valori usati sia per il disegno che per la legenda (single source of truth).
 - **Sfondo bianco**, in contrasto deliberato con lo sfondo scuro/spaziale del grafo 3D — scelta di tema che resta invariata anche nel restyling di coerenza tra le due viste (tipografia, pulsanti, spaziature), perché riguarda solo lo stile, non il colore di sfondo.
@@ -334,7 +363,7 @@ Riepilogo puntuale delle differenze tra quanto proposto in `aggiornamenti_e_prop
 - **"Core Backbone" iniziale con espansione progressiva al click (Progressive Disclosure)** (doc. precedente, punti 6 e 11): **non implementato**. Il codice attuale di `GraphCanvasComponent` carica e mostra **sempre tutti** i ~9.794 RFC pubblicati fin dall'apertura della vista — non esiste un `coreSize`/soglia top-N, né un meccanismo che nasconda nodi all'avvio per poi aggiungerli al click. Il commento stesso nel codice lo dichiara esplicitamente: *"Solo RFC pubblicati, tutti sempre visibili (nessun Core Backbone)"*. Questo è un cambio di visione, non solo di dettaglio implementativo: da "mostra un sottoinsieme e fai crescere il grafo interattivamente" a "mostra sempre tutto, usa filtri/focus per orientarti dentro l'insieme completo".
 - **Conseguenza pratica sul click su un nodo**: nel piano, "espandere il vicinato" implicava portare in vista nodi prima nascosti. Nell'implementazione reale (punto 8.5), il click non aggiunge nulla al grafo (è già tutto presente): applica solo un **focus visivo** — evidenzia il nodo e i suoi vicini raggiunti da archi uscenti di un solo livello, attenua il resto, sposta la camera. Il servizio dati (`GraphDataService`, punto 6) espone comunque `reachableFrom` per una BFS multi-livello, predisposta ma non ancora richiamata da questo componente: è un'estensione naturale se in futuro si volesse recuperare l'idea originaria di espansione progressiva multi-hop.
 - **`year` e `url` sempre assenti sui draft** (doc. precedente, punti 2 e 8): **risolto**, tramite `draft_metadata_enricher.py` (punti 1 e 4 di questo documento) — con la riserva del bug sui bucket "n.d." descritto al punto 3, non ancora corretto.
-- **Abstract e keywords nel pannello di dettaglio** (doc. precedente, punto 10): **implementato**, in entrambe le viste (punti 8.5 e 9.4), gestiti in modo condizionale coerentemente col fatto che non sono garantiti su ogni nodo (punto 2.2).
+- **Abstract e keywords nel pannello di dettaglio** (doc. precedente, punto 10): **implementato**, in entrambe le viste (punti 8.5 e 9.5), gestiti in modo condizionale coerentemente col fatto che non sono garantiti su ogni nodo (punto 2.2).
 - **Palette colorblind-safe (Okabe-Ito)** (doc. precedente, punto 11): **implementata**, in entrambe le viste, con la stessa attenzione a differenziare anche per luminosità/spessore oltre che per tonalità.
 
 ---

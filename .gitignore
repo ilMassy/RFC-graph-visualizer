@@ -21,3 +21,4 @@ backend/rfc-index.xml
 struttura.txt
 # Log generati dagli script (rigenerabili)
 *.log
+docs/Progetto_Infovis/.obsidian/

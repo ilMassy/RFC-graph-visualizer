@@ -144,6 +144,52 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
       this.selectedWorkingGroups().size > 0,
   );
 
+  // --- Ricerca RFC (barra di ricerca "intelligente") ---------------------
+  // Non è un filtro: non attenua/evidenzia nulla nel grafo, serve solo a
+  // saltare direttamente su un RFC specifico (per numero o per titolo),
+  // riusando selectRelatedNode()/focusOn() già usati dal pannello dettaglio.
+  readonly rfcSearchQuery = signal('');
+  readonly rfcSearchOpen = signal(false);
+  readonly rfcSearchHighlightIndex = signal(0);
+
+  /** Normalizza un ID RFC (o l'input dell'utente) per un confronto tollerante
+   *  a prefisso "RFC", spazi e zeri iniziali: "RFC 0793", "rfc793" e "793"
+   *  devono tutti corrispondere allo stesso documento. */
+  private normalizeRfcQuery(raw: string): string {
+    return raw
+      .trim()
+      .toLowerCase()
+      .replace(/^rfc\s*/, '')
+      .replace(/^0+(?=\d)/, '');
+  }
+
+  /** Risultati ordinati per rilevanza: match esatto sull'ID, poi ID che
+   *  inizia con la query, poi ID che la contiene, infine titolo che la
+   *  contiene. A parità di rilevanza vince l'impact score più alto.
+   *  Limitato alle prime 8 voci per restare leggibile come dropdown. */
+  readonly rfcSearchResults = computed<GraphNode[]>(() => {
+    const rawQuery = this.rfcSearchQuery().trim();
+    if (!rawQuery) return [];
+
+    const normalizedQuery = this.normalizeRfcQuery(rawQuery);
+    const lowerRawQuery = rawQuery.toLowerCase();
+    if (!normalizedQuery && !lowerRawQuery) return [];
+
+    const scored: { node: GraphNode; score: number }[] = [];
+    for (const n of this.graphData.graphData().nodes) {
+      const normalizedId = this.normalizeRfcQuery(n.id);
+      let score = -1;
+      if (normalizedQuery && normalizedId === normalizedQuery) score = 0;
+      else if (normalizedQuery && normalizedId.startsWith(normalizedQuery)) score = 1;
+      else if (normalizedQuery && normalizedId.includes(normalizedQuery)) score = 2;
+      else if (n.title?.toLowerCase().includes(lowerRawQuery)) score = 3;
+      if (score >= 0) scored.push({ node: n, score });
+    }
+
+    scored.sort((a, b) => a.score - b.score || b.node.impact_score - a.node.impact_score);
+    return scored.slice(0, 8).map(s => s.node);
+  });
+
   /** Numero di nodi che soddisfano i filtri correnti, `null` quando nessun
    *  filtro è attivo (cioè "tutti evidenziati" non ha senso mostrarlo). */
   readonly filteredMatchCount = signal<number | null>(null);
@@ -694,14 +740,20 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
 
   goToMatch(step: 1 | -1): void {
     if (this.filterMatchList.length === 0) return;
+
+    // Il cursore salvato in filterMatchIndex vale solo se corrisponde
+    // ancora al nodo attualmente selezionato: se nel frattempo il focus
+    // è cambiato per un'altra via (click diretto sul grafo, voce
+    // Updates/Obsoletes, "torna indietro"), il cursore è ormai stantio e
+    // va ricalcolato da dove ci si trova davvero, altrimenti Succ./Prec.
+    // riprende da un RFC diverso da quello in cui si è.
+    const selected = this.selectedNode();
+    const selectedIndex = selected ? this.filterMatchList.indexOf(selected.id) : -1;
     let current = this.filterMatchIndex();
-    if (current === null) {
-      // Nessun cursore attivo (es. appena cambiati i filtri): se ci si
-      // trova già su un nodo che soddisfa i filtri correnti, la
+    if (current === null || selectedIndex !== current) {
+      // Se ci si trova già su un nodo che soddisfa i filtri correnti, la
       // navigazione riparte da lì; altrimenti si parte "prima" del primo
       // elemento della lista, così Succ. va al primo e Prec. all'ultimo.
-      const selected = this.selectedNode();
-      const selectedIndex = selected ? this.filterMatchList.indexOf(selected.id) : -1;
       current = selectedIndex;
     }
     const next = (current + step + this.filterMatchList.length) % this.filterMatchList.length;
@@ -950,6 +1002,55 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
   onWorkingGroupSearch(event: Event): void {
     const value = (event.target as HTMLInputElement).value;
     this.workingGroupSearch.set(value);
+  }
+
+  onRfcSearchInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.rfcSearchQuery.set(value);
+    this.rfcSearchHighlightIndex.set(0);
+    this.rfcSearchOpen.set(value.trim().length > 0);
+  }
+
+  onRfcSearchFocus(): void {
+    if (this.rfcSearchQuery().trim().length > 0) this.rfcSearchOpen.set(true);
+  }
+
+  /** Ritardato apposta: senza questo margine il blur chiuderebbe la lista
+   *  prima che il (click) sul risultato scelto abbia modo di scattare. */
+  onRfcSearchBlur(): void {
+    setTimeout(() => this.rfcSearchOpen.set(false), 150);
+  }
+
+  onRfcSearchKeydown(event: KeyboardEvent): void {
+    const results = this.rfcSearchResults();
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (results.length === 0) return;
+      this.rfcSearchHighlightIndex.set((this.rfcSearchHighlightIndex() + 1) % results.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (results.length === 0) return;
+      this.rfcSearchHighlightIndex.set((this.rfcSearchHighlightIndex() - 1 + results.length) % results.length);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      const node = results[this.rfcSearchHighlightIndex()];
+      if (node) this.selectSearchResult(node);
+    } else if (event.key === 'Escape') {
+      this.clearRfcSearch();
+      (event.target as HTMLInputElement).blur();
+    }
+  }
+
+  selectSearchResult(node: GraphNode): void {
+    this.selectRelatedNode(node.id);
+    this.clearRfcSearch();
+  }
+
+  clearRfcSearch(): void {
+    this.rfcSearchQuery.set('');
+    this.rfcSearchOpen.set(false);
+    this.rfcSearchHighlightIndex.set(0);
   }
 
   resetFilters(): void {

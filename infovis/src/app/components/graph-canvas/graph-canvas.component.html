@@ -13,6 +13,45 @@
     <button type="button" class="back-btn" (click)="exitToMenu()">
       ← Menu
     </button>
+
+    <div class="rfc-search">
+      <input
+        type="text"
+        class="rfc-search-input"
+        placeholder="Cerca RFC per numero o titolo…"
+        [value]="rfcSearchQuery()"
+        (input)="onRfcSearchInput($event)"
+        (keydown)="onRfcSearchKeydown($event)"
+        (focus)="onRfcSearchFocus()"
+        (blur)="onRfcSearchBlur()"
+      />
+      @if (rfcSearchQuery()) {
+        <button type="button" class="rfc-search-clear" (click)="clearRfcSearch()" title="Cancella ricerca">✕</button>
+      }
+
+      @if (rfcSearchOpen() && rfcSearchQuery().trim().length > 0) {
+        @if (rfcSearchResults().length > 0) {
+          <ul class="rfc-search-results">
+            @for (node of rfcSearchResults(); track node.id; let i = $index) {
+              <li>
+                <button
+                  type="button"
+                  class="rfc-search-result"
+                  [class.is-highlighted]="i === rfcSearchHighlightIndex()"
+                  (click)="selectSearchResult(node)"
+                >
+                  <span class="rfc-search-result-id">{{ node.id }}</span>
+                  <span class="rfc-search-result-title">{{ node.title }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        } @else {
+          <div class="rfc-search-empty">Nessun RFC corrisponde.</div>
+        }
+      }
+    </div>
+
     <button type="button" class="reset-btn" (click)="resetView()">⟲ Reset vista</button>
     <button
       type="button"

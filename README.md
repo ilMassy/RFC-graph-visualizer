@@ -4,6 +4,13 @@ Piattaforma per esplorare visivamente le relazioni storiche tra i documenti RFC 
 
 Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'università Roma Tre.
 
+## A chi è rivolto
+
+Il sistema è pensato per due profili distinti, a cui rispondono le due viste del frontend:
+
+- **Chi lavora dentro l'IETF e vuole studiare lo stato dell'arte degli RFC** — quanti documenti esistono, come si sono succeduti nel tempo, quali sono stati storicamente i più rilevanti (`impact_score`) e come si relazionano tra loro (Updates/Obsoletes). La vista a **grafo 3D**, con tutti i ~9.794 RFC pubblicati sempre visibili fin dall'apertura e il filtro per decade, è pensata per dare una visione d'insieme e una cronistoria navigabile.
+- **Chi consulta gli RFC per un interesse specifico**, ad esempio un ricercatore universitario che parte da un argomento o da un documento noto. Per questo profilo contano soprattutto la ricerca testuale per id/titolo/parola chiave, il filtro per working group con conteggi, e la **timeline separata sui draft/aborted**, per seguire anche le proposte non ancora diventate RFC su un certo argomento.
+
 ## Stato del progetto
 
 🚧 **In sviluppo.** Il repository contiene sia la pipeline dati (backend Python, due script: parsing/enrichment principale e un secondo passaggio dedicato ai draft) sia il frontend Angular — menu iniziale, grafo 3D degli RFC pubblicati, timeline a istogramma per draft/aborted — oltre ai comandi di test e alla documentazione tecnica. I dati generati dalla pipeline (`graph_data_enriched.json` e simili) **non** sono versionati: vanno rigenerati localmente (vedi [Come iniziare](#come-iniziare)).
