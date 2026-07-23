@@ -140,10 +140,10 @@ Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`
 
 ### Dataset già pronto (alternativa rapida)
 
-Se non vuoi rilanciare l'intera pipeline (parsing + enrichment, che richiede tempo per il rate limiting di Datatracker), è disponibile un dataset già generato nella sezione [Releases](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v1) del repository:
+Se non vuoi rilanciare l'intera pipeline (parsing + enrichment, che richiede tempo per il rate limiting di Datatracker), è disponibile un dataset già generato nella sezione [Releases](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v2) del repository:
 
 ```bash
-wget https://github.com/ilMassy/RFC-graph-visualizer/releases/download/dataset-v1/graph_data_enriched.zip
+wget https://github.com/ilMassy/RFC-graph-visualizer/releases/download/dataset-v2/graph_data_enriched.zip
 unzip graph_data_enriched.zip -d infovis/public/data/
 ```
 
