@@ -75,7 +75,8 @@ RFC-graph-visualizer/
 │   ├── Progetto_Infovis/
 │   │   ├── aggiornamenti_e_proposte/
 │   │   │   ├── aggiornamenti_e_proposte_1.md                            # Aggiornamenti sullo stato del progetto e proposte sul design del grafo (versione 1)
-│   │   │   └── aggiornamenti_e_proposte_2.md                            # Aggiornamenti: frontend Angular implementato, nuovo script di enrichment draft, proposta sull'automazione della pipeline (versione 2)
+│   │   │   ├── aggiornamenti_e_proposte_2.md                            # Aggiornamenti: frontend Angular implementato, nuovo script di enrichment draft, proposta sull'automazione della pipeline (versione 2)
+│   │   │   └── aggiornamenti_e_proposte_3.md                            # Aggiornamenti: fix del bug sui bucket "n.d.", script una tantum repair_draft_state.py, decisione sull'automazione (update_dataset.sh via hook npm) (versione 3)
 │   │   └── img/                                                         
 │   │       ├── grafo-dettaglio-rfc1035.png                              # Pannello di dettaglio e focus sul nodo RFC1035 con evidenziazione dei vicini uscenti
 │   │       ├── grafo-filtri-decade-wg.png                               # Pannello dei filtri avanzati per decade e ricerca testuale del Working Group ("idr")
@@ -152,7 +153,7 @@ unzip graph_data_enriched.zip -d infovis/public/data/
 
 Lo stato di avanzamento del progetto, dettagliato, e le proposte è tracciato nel documento:
 
-- [`docs/Progetto_Infovis/aggiornamenti_e_proposte/aggiornamenti_e_proposte_2.md`](docs/Progetto_Infovis/aggiornamenti_e_proposte/aggiornamenti_e_proposte_2.md) — versione 2: frontend Angular implementato, script di enrichment per i draft, proposta sull'automazione della pipeline ecc...
+- [`docs/Progetto_Infovis/aggiornamenti_e_proposte/aggiornamenti_e_proposte_3.md`](docs/Progetto_Infovis/aggiornamenti_e_proposte/aggiornamenti_e_proposte_3.md) — versione 3: fix del bug sui bucket "n.d.", script una tantum repair_draft_state.py, decisione sull'automazione ecc...
 
 ## Riferimenti
 
