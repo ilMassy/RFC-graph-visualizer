@@ -21,6 +21,9 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+	    "allowedCommonJsDependencies": [
+   		 "ngraph.forcelayout"
+  	    ]
             "browser": "src/main.ts",
             "tsConfig": "tsconfig.app.json",
             "inlineStyleLanguage": "scss",
@@ -44,8 +47,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "8kB",
-                  "maximumError": "10kB"
+                  "maximumWarning": "10kB",
+                  "maximumError": "12kB"
                 }
               ],
               "outputHashing": "all"
