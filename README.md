@@ -150,7 +150,7 @@ unzip graph_data_enriched.zip -d infovis/public/data/
 
 ## Aggiornamenti e proposte
 
-Lo stato di avanzamento del progetto e le proposte è tracciato nel documento:
+Lo stato di avanzamento del progetto, dettagliato, e le proposte è tracciato nel documento:
 
 - [`docs/Progetto_Infovis/aggiornamenti_e_proposte/aggiornamenti_e_proposte_2.md`](docs/Progetto_Infovis/aggiornamenti_e_proposte/aggiornamenti_e_proposte_2.md) — versione 2: frontend Angular implementato, script di enrichment per i draft, proposta sull'automazione della pipeline ecc...
 

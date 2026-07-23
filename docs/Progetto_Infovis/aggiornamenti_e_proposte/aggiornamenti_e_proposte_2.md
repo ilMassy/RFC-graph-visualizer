@@ -320,7 +320,7 @@ Non essendoci una libreria di scene-graph (a differenza del grafo 3D), l'hit-tes
 
 ![Vista timeline draft, colonne per anno, documento selezionato](../img/timeline-dettaglio-draft.png)
 
-*Istogramma completo (34.617 documenti in questo screenshot, contando solo draft/aborted senza filtro attivo): colonne per anno dal 1997 al 2026 più il bucket "n.d.", con `draft-andersson-mpls-open-dt-questions` selezionato — si vede l'etichetta "DRAFT ATTIVO/SCADUTO" e la nota sulla possibile indisponibilità del documento originale nel repository IETF.*
+*Istogramma completo (34.617 documenti in questo screenshot, contando solo draft/aborted senza filtro attivo): colonne per anno dal 1997 al 2026 più il bucket "n.d.", con draft selezionato — si vede l'etichetta "DRAFT ATTIVO/SCADUTO" e la nota sulla possibile indisponibilità del documento originale nel repository IETF.*
 
 ![Vista timeline filtrata sul working group "idr", con conteggi per gruppo](../img/timeline-filtro-wg-conteggi.png)
 
