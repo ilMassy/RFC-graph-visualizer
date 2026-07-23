@@ -30,6 +30,7 @@ Il sistema è pensato per due profili di utente distinti, con esigenze diverse a
 10. [`LandingMenuComponent` — il punto di ingresso](#10-landingmenucomponent--il-punto-di-ingresso)
 11. [Cosa è cambiato rispetto ai documenti precedenti](#11-cosa-è-cambiato-rispetto-ai-documenti-precedenti)
 12. [Automazione: come è stata affrontata](#12-automazione-come-è-stata-affrontata)
+13. [Problema noto ancora aperto: `parse` e i file locali custom](#13-problema-noto-ancora-aperto-parse-e-i-file-locali-custom)
 
 ---
 
@@ -408,3 +409,18 @@ Perché questa strada e non le tre discusse nel documento precedente:
 - **Rispetto alla via di mezzo con file di staging e promozione manuale**: non è stata necessaria, perché gli hook `prestart`/`prebuild` di npm sono già "fail-loud" per natura — se uno script fallisce (`set -euo pipefail` in `update_dataset.sh`), l'intero comando `npm start`/`npm run build` si interrompe con errore, senza mai arrivare a una build che serva un dataset a metà scritto. La stessa garanzia di non pubblicare mai un run fallito, ottenuta però senza dover introdurre un file di staging separato e un passo di promozione da gestire a mano.
 
 Il compromesso accettato, esplicito: il dataset si aggiorna solo quando qualcuno effettivamente lancia `npm start`/`npm run build` — se un'istanza del frontend restasse in esecuzione a lungo senza mai essere ribuildata, il dataset servito invecchierebbe comunque, esattamente come nello scenario manuale, solo spostato da "chi si dimentica di lanciare lo script" a "chi si dimentica di ridistribuire il frontend". Non è quindi una soluzione per un deployment a lunga vita lasciato a sé stesso, per cui uno scheduler indipendente resterebbe comunque l'opzione da valutare in futuro — ma per il contesto attuale del progetto (build locali e/o rilanciate manualmente per demo/sviluppo) copre lo stesso bisogno pratico del punto 12 del documento precedente, con un'infrastruttura più semplice da mantenere.
+
+---
+
+## 13. Problema noto ancora aperto: `parse` e i file locali custom
+
+A differenza dei punti 3 e 12 (entrambi chiusi in questa versione), questo è un problema **individuato ma non ancora corretto**, riportato qui per trasparenza e tracciabilità.
+
+L'argomento posizionale `input` del sotto-comando `parse` di `rfc_pipeline.py` è documentato (`--help`) come "Percorso locale a rfc-index.xml", il che lascia intendere che si possa passare un qualsiasi file XML locale da parsare così com'è. In realtà `download_if_changed()` tratta quel percorso *anche* come destinazione dell'eventuale download da `--source-url` (default l'indice reale su `rfc-editor.org`):
+
+- se il file esiste già e non si usa `--force`, viene comunque tentata una richiesta condizionale (ETag/Last-Modified) al server remoto; se questa restituisce un `200` (contenuto nuovo o prima richiesta senza stato pregresso), il file locale passato come `input` viene **sovrascritto** con quanto scaricato;
+- con `--force` il download è incondizionato e la sovrascrittura è certa.
+
+L'impatto concreto è su `backend/sample_rfc_index.xml`, il file di esempio versionato e pensato per test rapidi "senza scaricare il dataset reale" (vedi README e punto 1 di questo stesso documento): lanciare `parse` passandolo direttamente come `input` può sovrascriverlo con l'indice reale, contraddicendo lo scopo dichiarato del file. Non compromette invece il funzionamento di `update_dataset.sh`/hook npm, che usano sempre e solo `rfc-index.xml` come nome, per cui lì il comportamento di download-e-sovrascrivi è quello effettivamente voluto.
+
+**Non è ancora chiaro se la correzione corretta sia**: aggiungere un flag esplicito tipo `--offline`/`--no-download` che salta del tutto `download_if_changed()` quando si vuole solo parsare un file locale arbitrario, oppure separare concettualmente "percorso della cache di download" da "file da parsare" as due argomenti distinti. Nel frattempo, il workaround pratico (documentato in `docs/comandi_per_testare.md`, punto 1) è copiare `sample_rfc_index.xml` in un percorso separato prima di ogni test, così è la copia — non l'originale versionato — a essere eventualmente sovrascritta.

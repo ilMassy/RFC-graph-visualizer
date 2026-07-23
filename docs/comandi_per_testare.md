@@ -11,6 +11,23 @@ source venv/bin/activate
 
 ## 1. Fase `parse` — indice reale completo
 
+⚠️ **Attenzione se si vuole testare con `sample_rfc_index.xml` invece che con l'indice reale**: l'argomento posizionale `input` di `parse` non è un semplice "file da leggere" — `download_if_changed()` lo tratta *anche* come percorso di destinazione dell'eventuale download da `--source-url` (default `rfc-editor.org`). Questo significa che lanciare
+
+```bash
+python rfc_pipeline.py parse sample_rfc_index.xml -o output/graph_data.json
+```
+
+**può sovrascrivere `sample_rfc_index.xml` con l'indice reale scaricato da rfc-editor.org** (succede se il controllo condizionale ottiene una risposta 200, oppure sempre con `--force`), vanificando lo scopo del file di esempio ("test rapido, senza scaricare il dataset reale"). Non esiste oggi un flag per dire "usa solo questo file locale, non toccare la rete".
+
+**Workaround finché non c'è un fix**: copiare il file di esempio altrove prima di passarlo allo script, così è la copia (non l'originale versionato) a essere eventualmente sovrascritta:
+
+```bash
+cp sample_rfc_index.xml output/sample_rfc_index_copy.xml
+python rfc_pipeline.py parse output/sample_rfc_index_copy.xml -o output/graph_data.json
+```
+
+---
+
 Scarica (se necessario) `rfc-index.xml` e produce `graph_data.json`:
 
 ```bash
