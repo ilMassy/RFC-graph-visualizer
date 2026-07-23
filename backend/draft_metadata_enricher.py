@@ -120,16 +120,26 @@ def _cache_path(cache_dir: Path, key: str) -> Path:
     return cache_dir / f"{safe_key}.json"
 
 
-def datatracker_get(path: str, cache_dir: Path) -> Optional[dict]:
-    """GET su Datatracker con cache su disco (incluse le risposte 404,
-    per non richiedere di nuovo qualcosa che sappiamo già non esistere)
-    e retry con backoff su errori di rete/rate limit."""
+def datatracker_get(path: str, cache_dir: Path) -> tuple[Optional[dict], bool]:
+    """GET su Datatracker con cache su disco e retry con backoff su
+    errori di rete/rate limit.
+
+    Restituisce una coppia (body, definitive):
+      - definitive=True  → risposta certa (200 o 404, letta da cache o
+        appena ottenuta): ha senso persisterla e non richiederla più.
+        body è il documento se 200, None se 404.
+      - definitive=False → richiesta fallita per motivi transitori
+        (errore di rete/HTTP diverso da 404/429, o retry esauriti)
+        dopo tutti i tentativi: NON è un risultato definitivo, il
+        chiamante non deve considerare l'id come "processato" e deve
+        lasciarlo disponibile per un retry al prossimo run. Per questo
+        motivo questo esito non viene mai scritto in cache."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     cache_file = _cache_path(cache_dir, path)
 
     if cache_file.exists():
         cached = load_json(cache_file)
-        return cached.get("body") if cached.get("status") == 200 else None
+        return (cached.get("body") if cached.get("status") == 200 else None), True
 
     url = f"{DATATRACKER_BASE}{path}"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
@@ -139,11 +149,11 @@ def datatracker_get(path: str, cache_dir: Path) -> Optional[dict]:
             with urllib.request.urlopen(req, timeout=15) as resp:
                 body = json.loads(resp.read().decode("utf-8"))
                 save_json_atomic(cache_file, {"status": 200, "body": body})
-                return body
+                return body, True
         except urllib.error.HTTPError as exc:
             if exc.code == 404:
                 save_json_atomic(cache_file, {"status": 404, "body": None})
-                return None
+                return None, True
             if exc.code == 429:
                 retry_after = int(exc.headers.get("Retry-After", "5"))
                 log.warning("Rate limited su %s, attendo %ss", path, retry_after)
@@ -154,8 +164,8 @@ def datatracker_get(path: str, cache_dir: Path) -> Optional[dict]:
             log.warning("Errore di rete su %s (tentativo %s/%s): %s", path, attempt, MAX_RETRIES, exc)
         time.sleep(2 ** attempt)  # backoff esponenziale
 
-    log.error("Impossibile ottenere %s dopo %s tentativi, salto", path, MAX_RETRIES)
-    return None
+    log.error("Impossibile ottenere %s dopo %s tentativi: non definitivo, verrà ritentato al prossimo run", path, MAX_RETRIES)
+    return None, False
 
 
 # ---------------------------------------------------------------------------
@@ -169,22 +179,32 @@ def build_draft_url(node_id: str) -> str:
     return f"https://datatracker.ietf.org/doc/html/{node_id.lower()}"
 
 
-def resolve_year_from_datatracker(node_id: str, cache_dir: Path) -> Optional[int]:
+def resolve_year_from_datatracker(node_id: str, cache_dir: Path) -> tuple[Optional[int], bool]:
     """Interroga il dettaglio del documento su Datatracker e ne estrae
     l'anno dal campo `time` (data dell'ultima revisione nota).
-    Restituisce None se il documento non è risolvibile o il campo
-    `time` è assente/malformato — mai un anno inventato."""
+
+    Restituisce (year, definitive):
+      - year è None se il documento non è risolvibile o il campo `time`
+        è assente/malformato — mai un anno inventato.
+      - definitive indica se questo None (o questo year) è un esito
+        certo (404, o 200 senza `time` valido — ripetere la richiesta
+        darebbe lo stesso risultato, quindi niente da guadagnare a
+        ritentare) oppure il sintomo di un fallimento transitorio della
+        richiesta HTTP, nel qual caso il chiamante NON deve considerare
+        il nodo come definitivamente privo di anno."""
     draft_name = node_id.lower()
-    detail = datatracker_get(f"/doc/document/{draft_name}/", cache_dir)
+    detail, definitive = datatracker_get(f"/doc/document/{draft_name}/", cache_dir)
+    if not definitive:
+        return None, False
     if not detail:
-        return None
+        return None, True
     time_str = detail.get("time")
     if not isinstance(time_str, str) or len(time_str) < 4:
-        return None
+        return None, True
     try:
-        return int(time_str[:4])
+        return int(time_str[:4]), True
     except ValueError:
-        return None
+        return None, True
 
 
 def optimize_abstract(text: str, max_chars: int = ABSTRACT_MAX_CHARS) -> str:
@@ -237,12 +257,21 @@ def run(
     )
 
     enriched_count = 0
+    retried_later_count = 0
     for i, node in enumerate(to_process, start=1):
         node["url"] = build_draft_url(node["id"])
-        year = resolve_year_from_datatracker(node["id"], cache_dir)
+        year, definitive = resolve_year_from_datatracker(node["id"], cache_dir)
         if year is not None:
             node["year"] = year
-        processed_ids.add(node["id"])
+        if definitive:
+            # Esito certo (anno risolto, 404, o time assente/malformato su
+            # una risposta 200): non ha senso richiederlo di nuovo in futuro.
+            processed_ids.add(node["id"])
+        else:
+            # Fallimento transitorio: NON marchiamo l'id come processato,
+            # così needs_enrichment() lo riproporrà al prossimo run invece
+            # di lasciarlo bloccato in "n.d." per sempre (bug corretto qui).
+            retried_later_count += 1
         enriched_count += 1
 
         time.sleep(REQUEST_DELAY_SECONDS)
@@ -271,7 +300,10 @@ def run(
     save_state(state_path, state)
     save_json_atomic(output_path, graph)
 
-    log.info("Completato: %s nodi arricchiti in questo run, output scritto in %s", enriched_count, output_path)
+    log.info(
+        "Completato: %s nodi tentati in questo run (%s risolti in modo definitivo, %s rimandati a un retry futuro per fallimento transitorio), output scritto in %s",
+        enriched_count, enriched_count - retried_later_count, retried_later_count, output_path,
+    )
 
 
 def main() -> None:
