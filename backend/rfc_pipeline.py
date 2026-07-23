@@ -34,7 +34,7 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 log = logging.getLogger("rfc_pipeline")
@@ -47,6 +47,7 @@ CACHE_DIR = Path(".cache/datatracker")
 REQUEST_DELAY_SECONDS = 0.5
 MAX_RETRIES = 3
 CHECKPOINT_EVERY = 200
+DRAFT_CHECKPOINT_EVERY_PAGES = 10  # checkpoint ogni N pagine durante il fetch draft/aborted
 
 
 def now_iso() -> str:
@@ -565,7 +566,22 @@ def resolve_document_state_slug(doc_metadata: dict) -> Optional[str]:
     return None
 
 
-def fetch_drafts_and_aborted(existing_ids: set, since_iso: Optional[str]) -> list:
+def fetch_drafts_and_aborted(
+    existing_ids: set,
+    since_iso: Optional[str],
+    resume_path: Optional[str] = None,
+    on_page: Optional[Callable[[list, Optional[str]], None]] = None,
+) -> list:
+    """Se resume_path è valorizzato (ripresa da un run interrotto durante
+    la paginazione), riparte direttamente da lì invece che dai parametri
+    iniziali -- evita di rifare da pagina 1 tutte le pagine già scaricate.
+
+    Se on_page è fornito, viene chiamato dopo OGNI pagina con
+    (nuovi_nodi_di_questa_pagina, next_path_o_None). Il chiamante può
+    usarlo per fare checkpoint incrementali (nodi + url della pagina
+    successiva), così un'interruzione a metà non fa perdere il lavoro
+    già fatto e il run successivo riparte dalla pagina giusta invece che
+    da capo."""
     results = []
     params = {
         "states__type__slug": "draft",
@@ -575,7 +591,7 @@ def fetch_drafts_and_aborted(existing_ids: set, since_iso: Optional[str]) -> lis
     if since_iso:
         params["time__gte"] = since_iso
 
-    path = f"/doc/document/?{urllib.parse.urlencode(params)}"
+    path = resume_path or f"/doc/document/?{urllib.parse.urlencode(params)}"
     pages_fetched = 0
     while path:
         page = datatracker_get(path)
@@ -585,6 +601,7 @@ def fetch_drafts_and_aborted(existing_ids: set, since_iso: Optional[str]) -> lis
                 log.warning("Query draft/aborted senza risultati validi.")
             break
 
+        page_results = []
         for obj in page["objects"]:
             doc_id = obj.get("name", "").upper()
             if doc_id in existing_ids:
@@ -619,10 +636,16 @@ def fetch_drafts_and_aborted(existing_ids: set, since_iso: Optional[str]) -> lis
             if keywords is not None:
                 node["keywords"] = keywords
 
-            results.append(node)
+            page_results.append(node)
+
+        results.extend(page_results)
 
         next_url = (page.get("meta") or {}).get("next")
         path = next_url.replace("/api/v1", "") if next_url else None
+
+        if on_page:
+            on_page(page_results, path)
+
         if path:
             log.info("Pagina draft %d completata, continuo...", pages_fetched)
 
@@ -693,7 +716,7 @@ def run_enrich(args) -> None:
     result_nodes = dict(load_existing_enriched(args.output)["nodes"])
 
     # Processiamo tutto ciò che non è già marcato come arricchito
-    to_process = [n for n in all_nodes if n["id"] not in enriched_ids]
+    to_process = [n for n in all_nodes if n["id"] not in result_nodes]
     log.info("Nodi totali: %d | già processati: %d | da processare: %d",
               len(all_nodes), len(enriched_ids), len(to_process))
 
@@ -729,10 +752,41 @@ def run_enrich(args) -> None:
 
     if not args.skip_drafts:
         since = None if args.force else state.get("last_draft_fetch_iso")
-        draft_nodes = fetch_drafts_and_aborted(set(result_nodes.keys()), since_iso=since)
-        for dn in draft_nodes:
-            result_nodes[dn["id"]] = dn
-            enriched_ids.add(dn["id"])
+        resume_path = None if args.force else state.get("draft_fetch_resume_path")
+        if resume_path:
+            log.info("Riprendo il fetch draft dalla pagina interrotta in precedenza (non riparto da zero).")
+
+        pages_since_checkpoint = 0
+
+        def _on_draft_page(page_nodes: list, next_path: Optional[str]) -> None:
+            nonlocal pages_since_checkpoint
+            for dn in page_nodes:
+                result_nodes[dn["id"]] = dn
+                enriched_ids.add(dn["id"])
+            state["draft_fetch_resume_path"] = next_path
+            pages_since_checkpoint += 1
+            if pages_since_checkpoint >= DRAFT_CHECKPOINT_EVERY_PAGES:
+                pages_since_checkpoint = 0
+                checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
+                           args.output, args.state_file, label="fetch draft in corso")
+
+        try:
+            fetch_drafts_and_aborted(
+                set(result_nodes.keys()), since_iso=since,
+                resume_path=resume_path, on_page=_on_draft_page,
+            )
+        except KeyboardInterrupt:
+            checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
+                       args.output, args.state_file, label="fetch draft interrotto (Ctrl+C)")
+            log.warning("Interrotto durante il fetch draft: rilancia lo stesso comando per riprendere da qui.")
+            raise
+        except Exception:
+            checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
+                       args.output, args.state_file, label="fetch draft: crash imprevisto")
+            log.exception("Errore imprevisto nel fetch draft: stato salvato, rilancia per riprendere da qui.")
+            raise
+
+        state["draft_fetch_resume_path"] = None
         state["last_draft_fetch_iso"] = now_naive_for_filter()
 
     checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
