@@ -16,19 +16,19 @@
 # incrementali (stato su disco + cache HTTP), quindi se non ci sono
 # novita' lato IETF il costo di un run "a vuoto" e' minimo.
 #
-# BOOTSTRAP/RICONCILIAZIONE: lo stato di rfc_pipeline.py enrich
-# (.state/enricher_state.json, non versionato) decide cosa e' "gia'
-# processato" guardando SOLO la lista di id salvata li' -- non guarda se
-# il nodo ha gia' i campi risolti. Se questo file manca (clone fresco,
-# cache persa, ecc.) o e' disallineato rispetto al dataset (es. run
-# precedente interrotto presto, che ha salvato uno stato parziale) ma il
-# dataset in infovis/public/data/ e' gia' piu' completo di quanto dice lo
-# stato, senza riconciliazione la pipeline rielaborerebbe da zero nodi
-# gia' presenti, nodo per nodo, chiamata Datatracker per chiamata
-# Datatracker. Per evitarlo: ad ogni run, uniamo enriched_ids nello stato
-# con tutti gli id che il dataset gia' contiene (union, non sovrascrittura
-# secca), cosi' uno stato esistente ma incompleto non fa ripartire tutto
-# da capo.
+# BOOTSTRAP/RICONCILIAZIONE: NB per chi tocca questo script in futuro --
+# run_enrich() in rfc_pipeline.py decide quali nodi riprocessare guardando
+# direttamente il contenuto del file di output (graph_data_enriched.json),
+# non la lista enriched_ids dentro .state/enricher_state.json (quella e'
+# oggi usata solo per il log "già processati: N" e per bootstrap futuri
+# che la leggano davvero). Questo significa che, allo stato attuale del
+# codice, un dataset già completo NON verrebbe rielaborato da zero anche
+# con uno stato mancante o disallineato: il passaggio qui sotto serve solo
+# a tenere .state/enricher_state.json allineato al dataset per coerenza
+# (nel caso in cui in futuro qualche parte della pipeline torni a fidarsi
+# di enriched_ids), non è la cosa che oggi ci protegge da un rework da
+# zero -- quella protezione viene già gratis dal fatto che run_enrich
+# legge lo stato "chi è già presente" dal dataset stesso.
 # (draft_metadata_enricher.py non ha bisogno di un bootstrap analogo: la
 # sua needs_enrichment() guarda direttamente se url/year mancano sul
 # nodo, quindi e' gia' idempotente sui dati, indipendentemente dallo stato.)
@@ -36,13 +36,32 @@
 set -euo pipefail
 
 BACKEND_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-FRONTEND_DATA_DIR="/home/ilmassy/Scrivania/INFOVIS/infovis/public/data"
+
+# Cartella dati del frontend Angular (dove npm start/build si aspettano
+# di trovare graph_data.json / graph_data_enriched.json).
+# Di default e' calcolata come "../infovis/public/data" rispetto a questo
+# script, assumendo la struttura di repo standard del progetto:
+#     INFOVIS/
+#       backend/            <- questo script vive qui
+#       infovis/public/data <- dataset del frontend
+# Se il tuo checkout ha una struttura diversa (nomi di cartella diversi,
+# frontend non fratello di backend/, ecc.), NON modificare la riga sotto:
+# sovrascrivi invece la variabile d'ambiente prima di lanciare npm, es.:
+#     FRONTEND_DATA_DIR=/percorso/tuo/frontend/public/data npm run build
+# cosi' il default resta corretto per chiunque clona il repo con la
+# struttura standard, e chi ha un layout diverso non deve toccare lo script.
+FRONTEND_DATA_DIR="${FRONTEND_DATA_DIR:-$BACKEND_DIR/../infovis/public/data}"
 DATASET_FILE="graph_data_enriched.json"
 DATASET_PATH="$FRONTEND_DATA_DIR/$DATASET_FILE"
 ENRICH_STATE_FILE="$BACKEND_DIR/.state/enricher_state.json"
 PARSE_OUTPUT="$FRONTEND_DATA_DIR/graph_data.json"
 
-VENV_PYTHON="$BACKEND_DIR/venv/bin/python"
+# Interprete Python: usa il venv locale se presente in backend/venv
+# (creato con `python3 -m venv venv` dentro backend/), altrimenti ripiega
+# sul python3 di sistema. Se il tuo venv si chiama diversamente o sta
+# altrove, esporta VENV_PYTHON prima di lanciare npm, es.:
+#     VENV_PYTHON=/percorso/tuo/venv/bin/python npm run build
+VENV_PYTHON="${VENV_PYTHON:-$BACKEND_DIR/venv/bin/python}"
 if [ -x "$VENV_PYTHON" ]; then
     PYTHON="$VENV_PYTHON"
 else

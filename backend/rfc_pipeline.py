@@ -420,17 +420,32 @@ def _cache_path_for(url: str) -> Path:
     return CACHE_DIR / f"{safe_name}.json"
 
 
-def datatracker_get(path: str) -> Optional[dict]:
+def datatracker_get(path: str) -> tuple:
     """GET con cache su disco (anche per i 404, frequentissimi su RFC
     storici) e retry con backoff su errori transitori, inclusi i timeout
-    'nudi' non incapsulati in URLError."""
+    'nudi' non incapsulati in URLError.
+
+    Restituisce una coppia (data, definitive):
+      - definitive=True: risposta certa -- 200 (da cache o appena
+        ottenuta), 404, o 400 (query malformata: deterministico, un
+        retry darebbe lo stesso esito). Il chiamante puo' persistere
+        questo risultato, incluso un `data` a None, senza doverlo
+        ritentare in futuro.
+      - definitive=False: fallimento transitorio (errore di rete/timeout,
+        o un codice HTTP diverso da 404/400/429) rimasto tale dopo tutti
+        i retry. Il chiamante NON deve trattare l'assenza di dato come un
+        fatto certo: il nodo va lasciato "da processare" per essere
+        ritentato integralmente al prossimo run. Prima di questo fix,
+        qualunque fallimento (anche solo un timeout momentaneo) veniva
+        confuso con un 404 vero, e il nodo restava con layer/working_group
+        vuoti per sempre perche' non veniva mai ripescato da to_process."""
     url = f"{DATATRACKER_BASE}{path}"
     cache_file = _cache_path_for(url)
 
     if cache_file.exists():
         with cache_file.open("r", encoding="utf-8") as f:
             cached = json.load(f)
-        return None if cached == _NOT_FOUND_MARKER else cached
+        return (None if cached == _NOT_FOUND_MARKER else cached), True
 
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     req = urllib.request.Request(url, headers={"Accept": "application/json"})
@@ -442,7 +457,7 @@ def datatracker_get(path: str) -> Optional[dict]:
             with cache_file.open("w", encoding="utf-8") as f:
                 json.dump(data, f)
             time.sleep(REQUEST_DELAY_SECONDS)
-            return data
+            return data, True
         except urllib.error.HTTPError as e:
             if e.code == 429:
                 wait = int(e.headers.get("Retry-After", "5"))
@@ -453,7 +468,7 @@ def datatracker_get(path: str) -> Optional[dict]:
                 log.debug("404 (atteso, documento storico assente in Datatracker): %s", url)
                 with cache_file.open("w", encoding="utf-8") as f:
                     json.dump(_NOT_FOUND_MARKER, f)
-                return None
+                return None, True
             if e.code == 400:
                 body = ""
                 try:
@@ -461,109 +476,159 @@ def datatracker_get(path: str) -> Optional[dict]:
                 except Exception:
                     pass
                 log.warning("HTTP 400 (query malformata?) per %s -- risposta: %s", url, body)
-                return None
-            log.warning("HTTP %s per %s", e.code, url)
-            return None
+                return None, True
+            # Altri codici HTTP (5xx, 403, ...): non e' detto che ripetere
+            # la richiesta dia lo stesso esito (es. un 503 momentaneo del
+            # server), quindi si ritenta come per un errore di rete invece
+            # di arrendersi subito al primo tentativo.
+            wait = min(1.5 * (2 ** (attempt - 1)), 30)
+            log.warning("HTTP %s per %s (tentativo %d/%d) -- riprovo tra %.1fs",
+                        e.code, url, attempt, MAX_RETRIES, wait)
+            time.sleep(wait)
         except (urllib.error.URLError, TimeoutError, socket.timeout, ConnectionError) as e:
             wait = min(1.5 * (2 ** (attempt - 1)), 30)
             log.warning("Errore di rete/timeout (tentativo %d/%d) per %s: %s -- riprovo tra %.1fs",
                         attempt, MAX_RETRIES, url, e, wait)
             time.sleep(wait)
 
-    log.error("Fallito dopo %d tentativi, salto: %s", MAX_RETRIES, url)
-    return None
+    log.error("Fallito dopo %d tentativi, non definitivo: verra' ritentato al prossimo run: %s", MAX_RETRIES, url)
+    return None, False
 
 
-def fetch_rfc_doc_metadata(rfc_id: str) -> Optional[dict]:
+def fetch_rfc_doc_metadata(rfc_id: str) -> tuple:
+    """(doc_metadata, definitive) -- vedi datatracker_get()."""
     return datatracker_get(f"/doc/document/{rfc_id.lower()}/")
 
 
-def resolve_working_group(doc_metadata: Optional[dict]) -> Optional[str]:
+def resolve_working_group(doc_metadata: Optional[dict], doc_metadata_definitive: bool) -> tuple:
     """
-    Tri-stato esplicito:
-      - doc_metadata is None: non sappiamo NULLA (fetch fallito o 404) ->
-        None -> il chiamante DEVE omettere il campo, non scrivere "unknown".
+    Restituisce (working_group, definitive). Quattro-stato esplicito:
+      - doc_metadata_definitive=False: non sappiamo nemmeno se il
+        documento e' risolvibile (fetch metadata fallito in modo
+        transitorio) -> (None, False): NON e' un "nessun WG" certo, va
+        ritentato integralmente al prossimo run.
+      - doc_metadata is None (ma in modo definitivo, es. 404): (None, True)
+        -> fatto certo, il chiamante puo' omettere il campo per sempre.
       - doc_metadata esiste ma non ha 'group': Datatracker conferma che
-        non c'e' WG -> null (fatto certo, non un'incertezza).
-      - group presente ma il fetch del gruppo fallisce -> None (sappiamo
-        che un gruppo esiste ma non quale: non e' meno incerto di "non
-        sapere se esiste", quindi stesso trattamento: omettere).
-      - tutto risolto -> acronimo reale.
+        non c'e' WG -> (None, True), fatto certo.
+      - group presente ma il fetch del gruppo fallisce in modo
+        transitorio -> (None, False): da ritentare, non e' meno incerto
+        di "non sapere se il documento esiste".
+      - group presente e risolto -> (acronimo o None, True).
     """
+    if not doc_metadata_definitive:
+        return None, False
     if doc_metadata is None:
-        return None
+        return None, True
     group_url = doc_metadata.get("group")
     if not group_url:
-        return None
-    group_data = datatracker_get(group_url.replace("/api/v1", ""))
+        return None, True
+    group_data, group_definitive = datatracker_get(group_url.replace("/api/v1", ""))
+    if not group_definitive:
+        return None, False
     if group_data is None:
-        return None
-    return group_data.get("acronym") or None
+        return None, True
+    return (group_data.get("acronym") or None), True
 
 
-def resolve_area_acronym(doc_metadata: Optional[dict]) -> Optional[str]:
+def resolve_area_acronym(doc_metadata: Optional[dict], doc_metadata_definitive: bool) -> tuple:
     """group_url -> group_data -> parent_url (area) -> area_data.acronym.
-    None a qualunque hop mancante: nessuna via di mezzo, il chiamante
-    tratta None come "non risolvibile in modo autorevole"."""
+
+    Restituisce (area_acronym, definitive). None a qualunque hop mancante
+    in modo CERTO (404, o campo assente su una risposta 200) -> definitive
+    resta True: il chiamante tratta quel None come "non risolvibile in
+    modo autorevole", non come un'incertezza da ritentare. Se invece uno
+    qualunque degli hop fallisce in modo transitorio, definitive=False e
+    il chiamante non deve fidarsi del None come esito finale."""
+    if not doc_metadata_definitive:
+        return None, False
     if not doc_metadata:
-        return None
+        return None, True
     group_url = doc_metadata.get("group")
     if not group_url:
-        return None
-    group_data = datatracker_get(group_url.replace("/api/v1", ""))
+        return None, True
+    group_data, group_definitive = datatracker_get(group_url.replace("/api/v1", ""))
+    if not group_definitive:
+        return None, False
     if not group_data:
-        return None
+        return None, True
     parent_url = group_data.get("parent")
     if not parent_url:
-        return None
-    area_data = datatracker_get(parent_url.replace("/api/v1", ""))
-    return area_data.get("acronym") if area_data else None
+        return None, True
+    area_data, area_definitive = datatracker_get(parent_url.replace("/api/v1", ""))
+    if not area_definitive:
+        return None, False
+    return (area_data.get("acronym") if area_data else None), True
 
 
-def resolve_layer(rfc_id: str, doc_metadata: Optional[dict]) -> tuple:
-    """(layer, source). Solo due fonti autorevoli: override manuale o
-    area Datatracker. Nessun fallback su euristica testuale: un documento
-    non risolvibile viene escluso (None, 'unresolved'), mai classificato
-    con un'ipotesi non verificata."""
+def resolve_layer(rfc_id: str, doc_metadata: Optional[dict], doc_metadata_definitive: bool) -> tuple:
+    """(layer, source, definitive). Solo due fonti autorevoli: override
+    manuale o area Datatracker. Nessun fallback su euristica testuale: un
+    documento non risolvibile in modo CERTO viene escluso (None,
+    'unresolved', True), mai classificato con un'ipotesi non verificata.
+    Se la risoluzione fallisce in modo transitorio, definitive=False e il
+    chiamante non deve considerare 'unresolved' come esito finale."""
     if rfc_id in MANUAL_LAYER_OVERRIDES:
-        return MANUAL_LAYER_OVERRIDES[rfc_id], "manual_override"
-    area = resolve_area_acronym(doc_metadata)
+        return MANUAL_LAYER_OVERRIDES[rfc_id], "manual_override", True
+    area, area_definitive = resolve_area_acronym(doc_metadata, doc_metadata_definitive)
+    if not area_definitive:
+        return None, "unresolved", False
     if area and area in IETF_AREA_TO_LAYER:
-        return IETF_AREA_TO_LAYER[area], "datatracker_area"
-    return None, "unresolved"
+        return IETF_AREA_TO_LAYER[area], "datatracker_area", True
+    return None, "unresolved", True
 
 
 def enrich_node(node: dict) -> tuple:
+    """(node, source, definitive). Se definitive=False (fallimento
+    transitorio su una delle risoluzioni Datatracker), il nodo viene
+    restituito INVARIATO: il chiamante non deve scriverlo nel dataset ne'
+    marcarlo come processato, altrimenti un timeout momentaneo diventa un
+    layer/working_group mancante per sempre (era il bug: prima di questo
+    fix ogni fallimento, anche transitorio, veniva scritto come None
+    definitivo)."""
     rfc_id = node["id"]
-    doc_metadata = fetch_rfc_doc_metadata(rfc_id)
+    doc_metadata, doc_metadata_definitive = fetch_rfc_doc_metadata(rfc_id)
 
-    # Risoluzione layer: se None, lasciamo il campo a None
-    layer, source = resolve_layer(rfc_id, doc_metadata)
-    node["layer"] = layer # Se è None, il valore sarà esplicitamente None
+    layer, source, layer_definitive = resolve_layer(rfc_id, doc_metadata, doc_metadata_definitive)
+    working_group, wg_definitive = resolve_working_group(doc_metadata, doc_metadata_definitive)
+
+    if not (layer_definitive and wg_definitive):
+        return node, "unresolved", False
+
+    # Risoluzione layer: se None, lasciamo il campo a None (esito certo)
+    node["layer"] = layer
 
     # Risoluzione WG
-    working_group = resolve_working_group(doc_metadata)
-    if working_group == "none": 
+    if working_group == "none":
         node["working_group"] = None
     else:
-        node["working_group"] = working_group  
+        node["working_group"] = working_group
 
     # Default sempre presenti
     node.setdefault("is_draft", False)
     node.setdefault("is_aborted", False)
-    
-    return node, source
+
+    return node, source, True
 
 
-def resolve_document_state_slug(doc_metadata: dict) -> Optional[str]:
+def resolve_document_state_slug(doc_metadata: dict) -> tuple:
     """Cerca tra obj['states'] quello di tipo 'draft' (Active/Expired/
-    Dead/Replaced). None se non trovato/non risolvibile: il chiamante
-    tratta questo come motivo di esclusione, non di default a False/False."""
+    Dead/Replaced).
+
+    Restituisce (slug, definitive):
+      - definitive=True: slug trovato, oppure nessuno stato di tipo
+        draft tra quelli elencati (fatto certo, la lista states e'
+        completa in una risposta 200).
+      - definitive=False: una delle chiamate di stato e' fallita in modo
+        transitorio -- il chiamante non deve trattare "nessuno stato
+        draft trovato" come definitivo in questo caso."""
     for state_url in doc_metadata.get("states", []):
-        state_data = datatracker_get(state_url.replace("/api/v1", ""))
+        state_data, state_definitive = datatracker_get(state_url.replace("/api/v1", ""))
+        if not state_definitive:
+            return None, False
         if state_data and state_data.get("type") == "/api/v1/doc/statetype/draft/":
-            return state_data.get("slug")
-    return None
+            return state_data.get("slug"), True
+    return None, True
 
 
 def fetch_drafts_and_aborted(
@@ -583,6 +648,7 @@ def fetch_drafts_and_aborted(
     già fatto e il run successivo riparte dalla pagina giusta invece che
     da capo."""
     results = []
+    retried_later_count = 0
     params = {
         "states__type__slug": "draft",
         "states__slug__in": "active,expired,dead,repl",
@@ -594,7 +660,13 @@ def fetch_drafts_and_aborted(
     path = resume_path or f"/doc/document/?{urllib.parse.urlencode(params)}"
     pages_fetched = 0
     while path:
-        page = datatracker_get(path)
+        page, page_definitive = datatracker_get(path)
+        if not page_definitive:
+            # Fallimento transitorio sulla pagina stessa: ci fermiamo qui
+            # senza consumare resume_path, cosi' il prossimo run riparte
+            # da questa stessa pagina invece di saltarla.
+            log.warning("Pagina draft %d non ottenuta (fallimento transitorio), mi fermo qui: verra' ritentata al prossimo run.", pages_fetched + 1)
+            break
         pages_fetched += 1
         if not page or "objects" not in page:
             if pages_fetched == 1:
@@ -607,13 +679,23 @@ def fetch_drafts_and_aborted(
             if doc_id in existing_ids:
                 continue
 
-            # Risoluzione stato: ora resta None se incerto, non interrompe il ciclo
-            state_slug = resolve_document_state_slug(obj)
+            # Risoluzione stato: None solo se CERTO (nessuno stato draft
+            # tra quelli elencati), mai come conseguenza di un fallimento
+            # transitorio -- vedi controllo *_definitive sotto.
+            state_slug, state_definitive = resolve_document_state_slug(obj)
+            layer, _source, layer_definitive = resolve_layer(doc_id, obj, True)
+            working_group, wg_definitive = resolve_working_group(obj, True)
 
-            # Risoluzione layer: ora resta None se non trovato, non interrompe il ciclo
-            layer, _source = resolve_layer(doc_id, obj)
+            if not (state_definitive and layer_definitive and wg_definitive):
+                # Fallimento transitorio su almeno una risoluzione per
+                # questo documento: NON lo aggiungiamo a questo run, cosi'
+                # resta fuori da existing_ids e viene ritentato per intero
+                # (invece di essere salvato con status/layer/WG a meta' e
+                # mai piu' ripescato, dato che existing_ids e' l'unico
+                # criterio usato per decidere cosa e' gia' "fatto").
+                retried_later_count += 1
+                continue
 
-            working_group = resolve_working_group(obj)
             raw_keywords = obj.get("keywords")
             keywords = raw_keywords if isinstance(raw_keywords, list) else None
 
@@ -649,7 +731,10 @@ def fetch_drafts_and_aborted(
         if path:
             log.info("Pagina draft %d completata, continuo...", pages_fetched)
 
-    log.info("Query draft/aborted: %d pagine, %d documenti trovati", pages_fetched, len(results))
+    log.info(
+        "Query draft/aborted: %d pagine, %d documenti trovati, %d rimandati a un retry futuro (fallimento transitorio)",
+        pages_fetched, len(results), retried_later_count,
+    )
     return results
 
 
@@ -721,17 +806,31 @@ def run_enrich(args) -> None:
               len(all_nodes), len(enriched_ids), len(to_process))
 
     stats = {"manual_override": 0, "datatracker_area": 0, "unresolved": 0}
-    
+    retried_later_count = 0
+
     try:
         for i, node in enumerate(to_process, start=1):
-            # Arricchiamo il nodo: enrich_node ora garantisce che il nodo venga sempre restituito
-            enriched, source = enrich_node(dict(node))
+            enriched, source, definitive = enrich_node(dict(node))
+
+            if not definitive:
+                # Fallimento transitorio su questo nodo (timeout/errore di
+                # rete su una delle chiamate Datatracker): NON lo marchiamo
+                # come processato. Resta fuori da result_nodes, quindi il
+                # prossimo run lo rimette in to_process e lo ritenta per
+                # intero, invece di lasciarlo per sempre con layer/WG
+                # mancanti come se fosse un esito certo (bug corretto qui).
+                retried_later_count += 1
+                if i % CHECKPOINT_EVERY == 0:
+                    checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
+                               args.output, args.state_file, label=f"nodo {i}/{len(to_process)}")
+                continue
+
             stats[source] = stats.get(source, 0) + 1
-            
-            # Aggiunta SEMPRE del nodo (nessuna esclusione)
+
+            # Aggiunta SEMPRE del nodo risolto in modo definitivo (nessuna esclusione)
             result_nodes[enriched["id"]] = enriched
             enriched_ids.add(enriched["id"])
-            
+
             if i % CHECKPOINT_EVERY == 0:
                 checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
                            args.output, args.state_file, label=f"nodo {i}/{len(to_process)}")
@@ -747,8 +846,11 @@ def run_enrich(args) -> None:
         log.exception("Errore imprevisto: stato salvato. Rilancia per riprendere.")
         raise
 
-    log.info("Esito layer -> override: %d | area Datatracker: %d | non risolti: %d",
-              stats["manual_override"], stats["datatracker_area"], stats["unresolved"])
+    log.info(
+        "Esito layer -> override: %d | area Datatracker: %d | non risolti: %d | "
+        "rimandati a un retry futuro (fallimento transitorio): %d",
+        stats["manual_override"], stats["datatracker_area"], stats["unresolved"], retried_later_count,
+    )
 
     if not args.skip_drafts:
         since = None if args.force else state.get("last_draft_fetch_iso")

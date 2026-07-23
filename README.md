@@ -67,8 +67,9 @@ Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggio
 RFC-graph-visualizer/
 ├── backend/
 │   ├── draft_metadata_enricher.py                                       # Secondo passaggio dopo rfc_pipeline.py, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
-│   ├── rfc_pipeline.py                                                  # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (due sotto-comandi: parse, enrich)
-│   └── sample_rfc_index.xml                                             # Indice RFC di esempio, ridotto, per test rapidi della fase `parse` senza scaricare il dataset reale
+│   ├── rfc_pipeline.py                                                  # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (sotto-comandi: parse, enrich, all)
+│   ├── sample_rfc_index.xml                                             # Indice RFC di esempio, ridotto, per test rapidi della fase `parse` senza scaricare il dataset reale
+│   └── update_dataset.sh                                                # Orchestratore: lancia "rfc_pipeline.py all" + draft_metadata_enricher.py scrivendo direttamente in infovis/public/data/; richiamato in automatico dagli hook npm prestart/prebuild
 ├── docs/
 │   ├── Progetto_Infovis/
 │   │   ├── aggiornamenti_e_proposte/
@@ -127,15 +128,13 @@ Va lanciato dopo un `enrich` completo (senza `--skip-drafts`). Stesso paradigma 
 
 ## Come iniziare
 
-Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`): dopo il clone vanno rigenerati in locale prima di poter usare il frontend. Il riferimento completo, comando per comando, è in [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md), che parte proprio dal clone del repository. In sintesi, i passaggi sono:
+Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`), ma da quando esiste `backend/update_dataset.sh` la rigenerazione è **automatica**: gli hook `prestart`/`prebuild` di `infovis/package.json` lo lanciano da soli prima di `ng serve`/`ng build`, eseguendo in sequenza `rfc_pipeline.py all` e `draft_metadata_enricher.py` e scrivendo direttamente in `infovis/public/data/graph_data_enriched.json` — non serve più nessuna copia manuale. In sintesi:
 
-1. Clonare il repository e posizionarsi nella cartella `backend/`.
-2. Creare il virtualenv Python e lanciare `rfc_pipeline.py` (fasi `parse` + `enrich`).
-3. Lanciare `draft_metadata_enricher.py` per completare i campi mancanti sui draft.
-4. Copiare `graph_data_enriched.json` nella cartella dati del frontend (`infovis/public/data/`).
-5. Fare la build di Angular (`npx ng build`) e servire la cartella generata — per i comandi e le opzioni del frontend Angular vedi anche il [README di `infovis/`](infovis/README.md).
+1. Clonare il repository.
+2. (opzionale) Creare un virtualenv in `backend/venv`: se assente, lo script ripiega sul `python3` di sistema.
+3. Da `infovis/`, lanciare `npm install` e poi `npm run build` (o `npm start`).
 
-I comandi di test dettagliati per entrambi gli script, oltre ai comandi per l'avvio del frontend, sono in [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md).
+⚠️ Il primo run può richiedere tempo per il rate limiting di Datatracker; i run successivi sono incrementali e molto più veloci. Per i comandi di test dei singoli script backend, le variabili d'ambiente di override (`FRONTEND_DATA_DIR`, `VENV_PYTHON`) e l'alternativa del dataset già pronto, vedi [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md).
 
 ### Dataset già pronto (alternativa rapida)
 
@@ -146,7 +145,7 @@ wget https://github.com/ilMassy/RFC-graph-visualizer/releases/download/dataset-v
 unzip graph_data_enriched.zip -d infovis/public/data/
 ```
 
-⚠️ Il dataset scaricato riflette lo stato delle fonti IETF al momento della generazione (vedi il campo `meta.generated_at` dentro il JSON) — per dati aggiornati, va comunque rilanciata la pipeline.
+⚠️ Il dataset scaricato riflette lo stato delle fonti IETF al momento della generazione (vedi il campo `meta.generated_at` dentro il JSON). Il prossimo `npm run build`/`npm start` rilancerà comunque `update_dataset.sh` sopra questo file: essendo incrementale non lo ricostruisce da zero, ma se `rfc-index.xml` non è già presente in `backend/` il primo di questi run lo scarica comunque.
 
 ## Aggiornamenti e proposte
 

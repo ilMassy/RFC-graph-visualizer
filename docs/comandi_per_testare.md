@@ -1,6 +1,6 @@
 # Comandi per testare la pipeline di backend
 
-Riferimento rapido per testare `backend/rfc_pipeline.py` senza dover ricordare a memoria le opzioni. Da eseguire dentro `backend/`, con il virtualenv attivo:
+Riferimento rapido per testare `backend/rfc_pipeline.py` e `backend/draft_metadata_enricher.py` singolarmente, senza dover ricordare a memoria le opzioni. Nell'uso normale non serve lanciare nulla di questo a mano: gli hook `prestart`/`prebuild` di `infovis/package.json` chiamano già `backend/update_dataset.sh` (sezione 6) che esegue tutta la pipeline e scrive direttamente in `infovis/public/data/graph_data_enriched.json`. I comandi qui sotto scrivono invece in una cartella `output/` locale a `backend/`, comoda per test isolati senza toccare il dataset reale del frontend. Da eseguire dentro `backend/`, con il virtualenv attivo:
 
 ```bash
 cd percorso_cartella_backend
@@ -62,6 +62,8 @@ python rfc_pipeline.py enrich --input output/graph_data.json --output output/gra
 ```
 
 ## 3. Comando `all` — pipeline completa in un solo passaggio
+
+È lo stesso sotto-comando lanciato da `update_dataset.sh` (sezione 6), lì con `--enriched-output` puntato direttamente a `infovis/public/data/graph_data_enriched.json` invece che a `output/`:
 
 ```bash
 python rfc_pipeline.py all rfc-index.xml --enriched-output output/graph_data_enriched.json
@@ -181,15 +183,34 @@ print('Draft/aborted senza year:', senza_year, '(atteso: >0 ma minoranza)')
 
 ---
 
-## 6. Avvio del sistema — build del frontend Angular e serving statico
+## 6. `update_dataset.sh` — l'orchestratore automatico
 
-Riferimento per avviare il frontend una volta che `graph_data_enriched.json` è pronto in `backend/output/` (va copiato o linkato dentro la cartella servita da Angular, tipicamente `public/data/` o `src/assets/data/`, prima della build).
+Lanciato in automatico dagli hook `prestart`/`prebuild` definiti in `infovis/package.json`, quindi da `npm start`/`npm run build` non serve invocarlo a mano. Esegue in sequenza `rfc_pipeline.py all` e `draft_metadata_enricher.py`, scrivendo direttamente in `infovis/public/data/graph_data_enriched.json` (nessuna cartella `output/` né copia manuale, a differenza dei comandi di test isolato delle sezioni 1-5).
 
-Build di produzione, da dentro `infovis/` (la root del progetto Angular, non `backend/`):
+Percorsi di default (sovrascrivibili con variabili d'ambiente prima di `npm`):
+
+```bash
+# cartella dati del frontend, di default ../infovis/public/data rispetto a backend/
+FRONTEND_DATA_DIR=/percorso/tuo/frontend/public/data npm run build
+
+# interprete Python, di default backend/venv/bin/python se esiste, altrimenti python3 di sistema
+VENV_PYTHON=/percorso/tuo/venv/bin/python npm run build
+```
+
+Per lanciarlo manualmente (ad es. per rigenerare il dataset senza fare anche la build Angular):
+
+```bash
+cd backend
+bash update_dataset.sh
+```
+
+## 7. Avvio del sistema — build del frontend Angular e serving statico
+
+Da dentro `infovis/` (la root del progetto Angular, non `backend/`), `npm run build` lancia da solo l'hook `prebuild` (sezione 6) e poi la build:
 
 ```bash
 cd ~/Scrivania/INFOVIS/infovis
-npx ng build
+npm run build
 ```
 
 ⚠️ Il warning `Module 'ngraph.forcelayout' used by 'three-forcegraph' is not ESM` è atteso e non bloccante: è una dipendenza CommonJS del motore di force-layout 3D usato dal grafo, la build completa comunque correttamente.
@@ -205,11 +226,11 @@ A questo punto il frontend è raggiungibile su `http://127.0.0.1:8888`. Per ferm
 
 **Nota**: questo è un server di sviluppo/test minimale (serve solo file statici, nessuna configurazione di caching/compressione/HTTPS) — va bene per verificare il risultato di una build locale, non è pensato per un deploy in produzione.
 
-Per rigenerare il frontend dopo una modifica al codice Angular o dopo aver aggiornato `graph_data_enriched.json`, basta ripetere `npx ng build` e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta).
+Per rigenerare il frontend dopo una modifica al codice Angular o dopo un aggiornamento del dataset, basta ripetere `npm run build` e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta). Se invece si vuole solo ricompilare Angular senza rilanciare la pipeline dati (dataset già aggiornato), si può usare `npx ng build` per saltare l'hook `prebuild`.
 
 ---
 
-## 7. Pulizia tra un test e l'altro
+## 8. Pulizia tra un test e l'altro
 
 Rimuove stato e cache di `rfc_pipeline.py` per ripartire completamente da zero (usare con cautela: la prossima `enrich` rifà tutte le chiamate a Datatracker):
 
