@@ -486,6 +486,7 @@ def datatracker_get(path: str) -> tuple:
                 log.debug("404 (atteso, documento storico assente in Datatracker): %s", url)
                 with cache_file.open("w", encoding="utf-8") as f:
                     json.dump(_NOT_FOUND_MARKER, f)
+                time.sleep(REQUEST_DELAY_SECONDS)
                 return None, True
             if e.code == 400:
                 body = ""
@@ -494,6 +495,7 @@ def datatracker_get(path: str) -> tuple:
                 except Exception:
                     pass
                 log.warning("HTTP 400 (query malformata?) per %s -- risposta: %s", url, body)
+                time.sleep(REQUEST_DELAY_SECONDS)
                 return None, True
             # Altri codici HTTP (5xx, 403, ...): non e' detto che ripetere
             # la richiesta dia lo stesso esito (es. un 503 momentaneo del
@@ -616,11 +618,9 @@ def enrich_node(node: dict) -> tuple:
     # Risoluzione layer: se None, lasciamo il campo a None (esito certo)
     node["layer"] = layer
 
-    # Risoluzione WG
-    if working_group == "none":
-        node["working_group"] = None
-    else:
-        node["working_group"] = working_group
+    # Risoluzione WG: resolve_working_group() restituisce sempre None o un
+    # acronimo (mai la stringa "none"), quindi l'assegnazione è diretta.
+    node["working_group"] = working_group
 
     # Default sempre presenti
     node.setdefault("is_draft", False)

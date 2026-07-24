@@ -256,32 +256,52 @@ def run(
         len(nodes), len(processed_ids), len(to_process),
     )
 
+    def do_checkpoint(label: str) -> None:
+        state["processed_ids"] = sorted(processed_ids)
+        state["last_run_iso"] = now_iso()
+        save_state(state_path, state)
+        save_json_atomic(output_path, graph)
+        log.info("Checkpoint [%s]: %s nodi processati (stato e output salvati).", label, len(processed_ids))
+
     enriched_count = 0
     retried_later_count = 0
-    for i, node in enumerate(to_process, start=1):
-        node["url"] = build_draft_url(node["id"])
-        year, definitive = resolve_year_from_datatracker(node["id"], cache_dir)
-        if year is not None:
-            node["year"] = year
-        if definitive:
-            # Esito certo (anno risolto, 404, o time assente/malformato su
-            # una risposta 200): non ha senso richiederlo di nuovo in futuro.
-            processed_ids.add(node["id"])
-        else:
-            # Fallimento transitorio: NON marchiamo l'id come processato,
-            # così needs_enrichment() lo riproporrà al prossimo run invece
-            # di lasciarlo bloccato in "n.d." per sempre (bug corretto qui).
-            retried_later_count += 1
-        enriched_count += 1
+    try:
+        for i, node in enumerate(to_process, start=1):
+            node["url"] = build_draft_url(node["id"])
+            year, definitive = resolve_year_from_datatracker(node["id"], cache_dir)
+            if year is not None:
+                node["year"] = year
+            if definitive:
+                # Esito certo (anno risolto, 404, o time assente/malformato su
+                # una risposta 200): non ha senso richiederlo di nuovo in futuro.
+                processed_ids.add(node["id"])
+            else:
+                # Fallimento transitorio: NON marchiamo l'id come processato,
+                # così needs_enrichment() lo riproporrà al prossimo run invece
+                # di lasciarlo bloccato in "n.d." per sempre (bug corretto qui).
+                retried_later_count += 1
+            enriched_count += 1
 
-        time.sleep(REQUEST_DELAY_SECONDS)
+            time.sleep(REQUEST_DELAY_SECONDS)
 
-        if i % CHECKPOINT_EVERY == 0:
-            log.info("Checkpoint: %s/%s nodi arricchiti in questo run", i, len(to_process))
-            state["processed_ids"] = sorted(processed_ids)
-            state["last_run_iso"] = now_iso()
-            save_state(state_path, state)
-            save_json_atomic(output_path, graph)
+            if i % CHECKPOINT_EVERY == 0:
+                do_checkpoint(f"nodo {i}/{len(to_process)}")
+    except KeyboardInterrupt:
+        # Senza questo salvataggio immediato, un'interruzione arrivata prima
+        # del prossimo multiplo di CHECKPOINT_EVERY perdeva tutto il lavoro
+        # di questo run (stato e output restavano fermi all'ultimo checkpoint
+        # precedente): un riavvio a pochi secondi dall'interruzione avrebbe
+        # mostrato "già processati: 0" invece di riprendere da dove si era
+        # fermato, contraddicendo il test descritto in comandi_per_testare.md
+        # (bug corretto qui, per allinearsi al comportamento di
+        # rfc_pipeline.py::run_enrich).
+        do_checkpoint("interrotto (Ctrl+C)")
+        log.warning("Interrotto: rilancia lo stesso comando per riprendere.")
+        raise
+    except Exception:
+        do_checkpoint("crash imprevisto")
+        log.exception("Errore imprevisto: stato salvato. Rilancia per riprendere.")
+        raise
 
     # Ottimizzazione abstract: passata leggera su TUTTI i nodi (non solo
     # quelli appena arricchiti), idempotente — un abstract già
@@ -295,10 +315,7 @@ def run(
     ).strip(" +")
     graph["meta"]["generated_at"] = now_iso()
 
-    state["processed_ids"] = sorted(processed_ids)
-    state["last_run_iso"] = now_iso()
-    save_state(state_path, state)
-    save_json_atomic(output_path, graph)
+    do_checkpoint("run completo")
 
     log.info(
         "Completato: %s nodi tentati in questo run (%s risolti in modo definitivo, %s rimandati a un retry futuro per fallimento transitorio), output scritto in %s",
