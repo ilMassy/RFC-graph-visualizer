@@ -353,13 +353,31 @@ def load_existing_graph(output_path: Path) -> dict:
 
 def run_parse(args) -> None:
     state = load_parser_state(args.state_file)
-    downloaded = download_if_changed(args.source_url, args.input, state, force=args.force)
+    offline = getattr(args, "offline", False)
 
-    if not downloaded and args.output.exists() and not args.force:
-        log.info("Nessuna novita' sulla fonte e output gia' presente: nulla da fare.")
-        state["last_run_iso"] = now_iso()
-        save_json_state(args.state_file, state)
-        return
+    if offline:
+        # Bug corretto qui (punto 13 di aggiornamenti_e_proposte_3.md):
+        # download_if_changed() trattava sempre `input` anche come
+        # destinazione dell'eventuale download da --source-url, quindi
+        # passare un file locale custom come sample_rfc_index.xml poteva
+        # farlo sovrascrivere con l'indice reale. Con --offline si salta
+        # del tutto la fonte remota: `input` viene solo letto, mai scritto.
+        if not args.input.exists():
+            raise FileNotFoundError(
+                f"--offline richiede che {args.input} esista già: nessun download verrà tentato."
+            )
+        log.info(
+            "--offline: parso %s così com'è, nessuna richiesta a %s e nessuna sovrascrittura del file di input.",
+            args.input, args.source_url,
+        )
+    else:
+        downloaded = download_if_changed(args.source_url, args.input, state, force=args.force)
+
+        if not downloaded and args.output.exists() and not args.force:
+            log.info("Nessuna novita' sulla fonte e output gia' presente: nulla da fare.")
+            state["last_run_iso"] = now_iso()
+            save_json_state(args.state_file, state)
+            return
 
     tree = ET.parse(args.input)
     root = tree.getroot()
@@ -905,12 +923,28 @@ def run_enrich(args) -> None:
 # =============================================================================
 
 def add_parse_args(p):
-    p.add_argument("input", type=Path, help="Percorso locale a rfc-index.xml")
+    p.add_argument(
+        "input", type=Path,
+        help=(
+            "Percorso locale a rfc-index.xml. Salvo con --offline, è anche la destinazione "
+            "dell'eventuale download da --source-url e può quindi essere sovrascritto: per "
+            "parsare un file custom (es. sample_rfc_index.xml) così com'è, usare --offline."
+        ),
+    )
     p.add_argument("-o", "--output", type=Path, default=Path("graph_data.json"))
     p.add_argument("--source-url", default=DEFAULT_SOURCE_URL)
     p.add_argument("--state-file", type=Path, default=Path(".state/parser_state.json"))
     p.add_argument("--min-impact-for-core", type=int, default=0)
     p.add_argument("--force", action="store_true")
+    p.add_argument(
+        "--offline", "--no-download",
+        dest="offline", action="store_true",
+        help=(
+            "Parsa 'input' così com'è, senza controllare o scaricare nulla dalla fonte "
+            "remota (--source-url). Da usare quando 'input' è un file locale custom (es. "
+            "sample_rfc_index.xml) che non deve mai essere sovrascritto da un download."
+        ),
+    )
 
 
 def add_enrich_args(p):

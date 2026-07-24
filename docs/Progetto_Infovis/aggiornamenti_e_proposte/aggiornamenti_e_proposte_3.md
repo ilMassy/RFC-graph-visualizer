@@ -30,7 +30,7 @@ Il sistema è pensato per due profili di utente distinti, con esigenze diverse a
 10. [`LandingMenuComponent` — il punto di ingresso](#10-landingmenucomponent--il-punto-di-ingresso)
 11. [Cosa è cambiato rispetto ai documenti precedenti](#11-cosa-è-cambiato-rispetto-ai-documenti-precedenti)
 12. [Automazione: come è stata affrontata](#12-automazione-come-è-stata-affrontata)
-13. [Problema noto ancora aperto: `parse` e i file locali custom](#13-problema-noto-ancora-aperto-parse-e-i-file-locali-custom)
+13. [Bug risolto: `parse` e i file locali custom](#13-bug-risolto-parse-e-i-file-locali-custom)
 
 ---
 
@@ -412,15 +412,8 @@ Il compromesso accettato, esplicito: il dataset si aggiorna solo quando qualcuno
 
 ---
 
-## 13. Problema noto ancora aperto: `parse` e i file locali custom
+## 13. Bug risolto: `parse` e i file locali custom
 
-A differenza dei punti 3 e 12 (entrambi chiusi in questa versione), questo è un problema **individuato ma non ancora corretto**, riportato qui per trasparenza e tracciabilità.
+Il bug: `download_if_changed()` trattava l'`input` di `parse` anche come destinazione del download da `--source-url`, quindi passare `sample_rfc_index.xml` come `input` poteva farlo sovrascrivere con l'indice reale scaricato da rfc-editor.org.
 
-L'argomento posizionale `input` del sotto-comando `parse` di `rfc_pipeline.py` è documentato (`--help`) come "Percorso locale a rfc-index.xml", il che lascia intendere che si possa passare un qualsiasi file XML locale da parsare così com'è. In realtà `download_if_changed()` tratta quel percorso *anche* come destinazione dell'eventuale download da `--source-url` (default l'indice reale su `rfc-editor.org`):
-
-- se il file esiste già e non si usa `--force`, viene comunque tentata una richiesta condizionale (ETag/Last-Modified) al server remoto; se questa restituisce un `200` (contenuto nuovo o prima richiesta senza stato pregresso), il file locale passato come `input` viene **sovrascritto** con quanto scaricato;
-- con `--force` il download è incondizionato e la sovrascrittura è certa.
-
-L'impatto concreto è su `backend/sample_rfc_index.xml`, il file di esempio versionato e pensato per test rapidi "senza scaricare il dataset reale" (vedi README e punto 1 di questo stesso documento): lanciare `parse` passandolo direttamente come `input` può sovrascriverlo con l'indice reale, contraddicendo lo scopo dichiarato del file. Non compromette invece il funzionamento di `update_dataset.sh`/hook npm, che usano sempre e solo `rfc-index.xml` come nome, per cui lì il comportamento di download-e-sovrascrivi è quello effettivamente voluto.
-
-**Non è ancora chiaro se la correzione corretta sia**: aggiungere un flag esplicito tipo `--offline`/`--no-download` che salta del tutto `download_if_changed()` quando si vuole solo parsare un file locale arbitrario, oppure separare concettualmente "percorso della cache di download" da "file da parsare" as due argomenti distinti. Nel frattempo, il workaround pratico (documentato in `docs/comandi_per_testare.md`, punto 1) è copiare `sample_rfc_index.xml` in un percorso separato prima di ogni test, così è la copia — non l'originale versionato — a essere eventualmente sovrascritta.
+Risolto con un nuovo flag `--offline`/`--no-download`: salta del tutto `download_if_changed()`, quindi si può passare `sample_rfc_index.xml` (o un altro XML locale) come `input` senza rischio di sovrascrittura da parte del download remoto.
