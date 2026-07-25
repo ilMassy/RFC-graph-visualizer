@@ -1,5 +1,18 @@
 # Comandi per testare la pipeline di backend
 
+## Indice
+
+1. [Fase `parse` — indice reale completo](#1-fase-parse--indice-reale-completo)
+2. [Fase `enrich` — arricchimento via Datatracker](#2-fase-enrich--arricchimento-via-datatracker)
+3. [Comando `all` — pipeline completa in un solo passaggio](#3-comando-all--pipeline-completa-in-un-solo-passaggio)
+4. [Verifiche sull'output finale](#4-verifiche-sulloutput-finale)
+5. [Fase `draft_metadata_enricher.py` — secondo passaggio, solo draft/aborted](#5-fase-draft_metadata_enricherpy--secondo-passaggio-solo-draftaborted)
+6. [`update_dataset.sh` — l'orchestratore automatico](#6-update_datasetsh--lorchestratore-automatico)
+7. [Avvio del sistema — build del frontend Angular e serving statico](#7-avvio-del-sistema--build-del-frontend-angular-e-serving-statico)
+8. [Pulizia tra un test e l'altro](#8-pulizia-tra-un-test-e-laltro)
+
+---
+
 Riferimento rapido per testare `backend/rfc_pipeline.py` e `backend/draft_metadata_enricher.py` singolarmente, senza dover ricordare a memoria le opzioni. Nell'uso normale non serve lanciare nulla di questo a mano: gli hook `prestart`/`prebuild` di `infovis/package.json` chiamano già `backend/update_dataset.sh` (sezione 6) che esegue tutta la pipeline e scrive direttamente in `infovis/public/data/graph_data_enriched.json`. I comandi qui sotto scrivono invece in una cartella `output/` locale a `backend/`, comoda per test isolati senza toccare il dataset reale del frontend. Da eseguire dentro `backend/`, con il virtualenv attivo:
 
 ```bash
