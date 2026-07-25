@@ -8,8 +8,11 @@
 #
 # Step eseguiti in sequenza:
 #   0. bootstrap (solo se necessario) -- vedi sotto
-#   1. rfc_pipeline.py all        (fetch condizionale rfc-index.xml + enrich)
-#   2. draft_metadata_enricher.py (url/year/abstract sui nodi draft/aborted)
+#   1. rfc_pipeline.py all               (fetch condizionale rfc-index.xml + enrich)
+#   2. draft_metadata_enricher.py        (url/year/abstract sui nodi draft/aborted)
+#   3. purge_phantom_draft_nodes.py      (rimuove eventuali nodi fantasma residui
+#                                          is_draft/is_aborted entrambi null -- vedi
+#                                          docstring dello script)
 #
 # Pensato per essere lanciato ad ogni avvio del frontend (hook npm
 # prestart/prebuild in infovis/package.json): tutti gli step sono
@@ -79,7 +82,7 @@ echo " [update_dataset] $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=================================================================="
 
 echo ""
-echo "[update_dataset] (0/3) controllo stato locale enrich ..."
+echo "[update_dataset] (0/4) controllo stato locale enrich ..."
 if [ -f "$DATASET_PATH" ]; then
     mkdir -p "$(dirname "$ENRICH_STATE_FILE")"
     "$PYTHON" - "$DATASET_PATH" "$ENRICH_STATE_FILE" <<'PYEOF'
@@ -122,24 +125,32 @@ PYEOF
 else
     echo "[update_dataset]     nessun dataset preesistente in $DATASET_PATH: prima run da zero."
 fi
-echo "[update_dataset] (0/3) completato."
+echo "[update_dataset] (0/4) completato."
 
 echo ""
-echo "[update_dataset] (1/3) rfc_pipeline.py all ..."
+echo "[update_dataset] (1/4) rfc_pipeline.py all ..."
 "$PYTHON" rfc_pipeline.py all rfc-index.xml \
     -o "$PARSE_OUTPUT" \
     --enriched-output "$DATASET_PATH" \
     --enrich-state-file "$ENRICH_STATE_FILE"
-echo "[update_dataset] (1/3) completato."
+echo "[update_dataset] (1/4) completato."
 
 echo ""
-echo "[update_dataset] (2/3) draft_metadata_enricher.py ..."
+echo "[update_dataset] (2/4) draft_metadata_enricher.py ..."
 "$PYTHON" draft_metadata_enricher.py --input "$DATASET_PATH" --output "$DATASET_PATH"
-echo "[update_dataset] (2/3) completato."
+echo "[update_dataset] (2/4) completato."
+
+echo ""
+echo "[update_dataset] (3/4) purge_phantom_draft_nodes.py ..."
+# In-place sullo stesso file: se non ci sono nodi fantasma lo script non
+# scrive nulla (nulla da fare), quindi il costo di un run "a vuoto" e'
+# minimo, in linea col resto della pipeline.
+"$PYTHON" purge_phantom_draft_nodes.py --input "$DATASET_PATH" --output "$DATASET_PATH"
+echo "[update_dataset] (3/4) completato."
 
 echo ""
 echo "=================================================================="
-echo " [update_dataset] FINE aggiornamento dataset (3/3) -- procedo con la build"
+echo " [update_dataset] FINE aggiornamento dataset (4/4) -- procedo con la build"
 echo " [update_dataset] dataset aggiornato direttamente in: $DATASET_PATH"
 echo "=================================================================="
 echo ""

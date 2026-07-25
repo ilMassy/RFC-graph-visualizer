@@ -48,6 +48,7 @@ REQUEST_DELAY_SECONDS = 0.5
 MAX_RETRIES = 3
 CHECKPOINT_EVERY = 200
 DRAFT_CHECKPOINT_EVERY_PAGES = 10  # checkpoint ogni N pagine durante il fetch draft/aborted
+DRAFT_RECHECK_CHECKPOINT_EVERY_NODES = 50  # checkpoint ogni N nodi durante il ricontrollo draft attivi
 
 
 def now_iso() -> str:
@@ -438,10 +439,20 @@ def _cache_path_for(url: str) -> Path:
     return CACHE_DIR / f"{safe_name}.json"
 
 
-def datatracker_get(path: str) -> tuple:
+def datatracker_get(path: str, bypass_cache: bool = False) -> tuple:
     """GET con cache su disco (anche per i 404, frequentissimi su RFC
     storici) e retry con backoff su errori transitori, inclusi i timeout
     'nudi' non incapsulati in URLError.
+
+    La cache NON ha scadenza: va bene per un RFC pubblicato (contenuto
+    immutabile), ma sarebbe SBAGLIATO per l'endpoint /doc/document/{id}/
+    di un draft ancora attivo, il cui stato puo' cambiare da un run
+    all'altro. bypass_cache=True salta la lettura della cache (ma scrive
+    comunque il risultato fresco, aggiornandola) -- usato esclusivamente
+    da recheck_active_drafts() per garantire una lettura sempre aggiornata
+    dello stato, altrimenti dopo il primo run ogni ricontrollo successivo
+    leggerebbe per sempre lo stesso risultato cachato al primo giro,
+    rendendo il ricontrollo periodico inutile silenziosamente.
 
     Restituisce una coppia (data, definitive):
       - definitive=True: risposta certa -- 200 (da cache o appena
@@ -460,7 +471,7 @@ def datatracker_get(path: str) -> tuple:
     url = f"{DATATRACKER_BASE}{path}"
     cache_file = _cache_path_for(url)
 
-    if cache_file.exists():
+    if cache_file.exists() and not bypass_cache:
         with cache_file.open("r", encoding="utf-8") as f:
             cached = json.load(f)
         return (None if cached == _NOT_FOUND_MARKER else cached), True
@@ -515,9 +526,11 @@ def datatracker_get(path: str) -> tuple:
     return None, False
 
 
-def fetch_rfc_doc_metadata(rfc_id: str) -> tuple:
-    """(doc_metadata, definitive) -- vedi datatracker_get()."""
-    return datatracker_get(f"/doc/document/{rfc_id.lower()}/")
+def fetch_rfc_doc_metadata(rfc_id: str, bypass_cache: bool = False) -> tuple:
+    """(doc_metadata, definitive) -- vedi datatracker_get(). bypass_cache
+    va usato solo quando serve leggere lo stato AGGIORNATO di un
+    documento già visto in precedenza (vedi recheck_active_drafts)."""
+    return datatracker_get(f"/doc/document/{rfc_id.lower()}/", bypass_cache=bypass_cache)
 
 
 def resolve_working_group(doc_metadata: Optional[dict], doc_metadata_definitive: bool) -> tuple:
@@ -603,9 +616,7 @@ def enrich_node(node: dict) -> tuple:
     transitorio su una delle risoluzioni Datatracker), il nodo viene
     restituito INVARIATO: il chiamante non deve scriverlo nel dataset ne'
     marcarlo come processato, altrimenti un timeout momentaneo diventa un
-    layer/working_group mancante per sempre (era il bug: prima di questo
-    fix ogni fallimento, anche transitorio, veniva scritto come None
-    definitivo)."""
+    layer/working_group mancante per sempre."""
     rfc_id = node["id"]
     doc_metadata, doc_metadata_definitive = fetch_rfc_doc_metadata(rfc_id)
 
@@ -667,6 +678,7 @@ def fetch_drafts_and_aborted(
     da capo."""
     results = []
     retried_later_count = 0
+    excluded_no_state_count = 0
     params = {
         "states__type__slug": "draft",
         "states__slug__in": "active,expired,dead,repl",
@@ -714,10 +726,43 @@ def fetch_drafts_and_aborted(
                 retried_later_count += 1
                 continue
 
+            if state_slug is None:
+                # Caso anomalo: il documento soddisfa il filtro
+                # states__type__slug=draft della query (quindi DOVREBBE
+                # avere uno stato di tipo draft tra active/expired/dead/
+                # repl), eppure resolve_document_state_slug() non ne trova
+                # uno tra gli 'states' elencati sull'oggetto. E' un esito
+                # CERTO (non un fallimento transitorio), ma non e' uno dei
+                # quattro stati che il resto della pipeline sa gestire
+                # (recheck_active_drafts() si aspetta 'active'/'expired'
+                # per ricontrollare, 'dead'/'repl' come terminali).
+                # Prima di questa correzione, un caso simile veniva comunque
+                # aggiunto al dataset con is_draft/is_aborted a None: un
+                # nodo fantasma che non passava il filtro di NESSUNA delle
+                # due viste frontend (ne' grafo RFC ne' timeline draft) e
+                # non veniva mai piu' ricontrollato o rimosso da nessun
+                # meccanismo esistente, restando dead weight nel JSON per
+                # sempre. Coerentemente con "zero falsi positivi": se non
+                # e' risolvibile a uno stato noto, il documento semplicemente
+                # non entra nel dataset in questo run. Non essendo aggiunto,
+                # non finisce in existing_ids, quindi verra' ririchiesto (a
+                # basso costo, vista la rarita' del caso) ai run futuri,
+                # invece di essere perso o "congelato" per sempre.
+                log.warning(
+                    "%s: nessuno stato di tipo 'draft' risolvibile tra quelli elencati, pur "
+                    "avendo soddisfatto il filtro della query -- escluso da questo run (caso "
+                    "anomalo, verra' ririchiesto al prossimo run).",
+                    doc_id,
+                )
+                excluded_no_state_count += 1
+                continue
+
             raw_keywords = obj.get("keywords")
             keywords = raw_keywords if isinstance(raw_keywords, list) else None
 
-            # Creazione nodo: i campi incerti diventano None, il nodo viene aggiunto comunque
+            # Creazione nodo: layer/working_group possono essere None (esito
+            # certo), ma is_draft/is_aborted sono ORA sempre un booleano --
+            # mai None, perche' state_slug None e' stato escluso sopra.
             node = {
                 "id": doc_id,
                 "title": obj.get("title", ""),
@@ -725,8 +770,8 @@ def fetch_drafts_and_aborted(
                 "status": state_slug,
                 "year": None,
                 "layer": layer,
-                "is_draft": (state_slug in ("active", "expired")) if state_slug else None,
-                "is_aborted": (state_slug in ("dead", "repl")) if state_slug else None,
+                "is_draft": state_slug in ("active", "expired"),
+                "is_aborted": state_slug in ("dead", "repl"),
                 "impact_score": 0,
                 "n_updates": 0,
                 "n_obsoletes": 0,
@@ -750,10 +795,167 @@ def fetch_drafts_and_aborted(
             log.info("Pagina draft %d completata, continuo...", pages_fetched)
 
     log.info(
-        "Query draft/aborted: %d pagine, %d documenti trovati, %d rimandati a un retry futuro (fallimento transitorio)",
-        pages_fetched, len(results), retried_later_count,
+        "Query draft/aborted: %d pagine, %d documenti trovati, %d rimandati a un retry futuro "
+        "(fallimento transitorio), %d esclusi per stato draft non risolvibile (caso anomalo)",
+        pages_fetched, len(results), retried_later_count, excluded_no_state_count,
     )
     return results
+
+
+def recheck_active_drafts(
+    result_nodes: dict,
+    resume_after_id: Optional[str] = None,
+    on_progress: Optional[Callable[[str], None]] = None,
+    on_transient_failure: Optional[Callable[[], None]] = None,
+    skip_ids: Optional[set] = None,
+) -> tuple:
+    """Ricontrolla su Datatracker lo stato dei draft già presenti nel
+    dataset che risultano ancora 'active'/'expired' (unici stati non
+    terminali: un draft 'dead' o 'repl' non torna piu' indietro, quindi
+    NON viene mai incluso qui -- e' gia' un fatto certo che non cambiera'
+    piu'. Vedi fetch_drafts_and_aborted(): quella funzione, al contrario,
+    ignora ogni id gia' presente in existing_ids e quindi non si accorge
+    mai da sola di un draft 'active' che nel frattempo e' diventato RFC,
+    dead o repl -- e' esattamente il buco che questa funzione chiude.
+
+    skip_ids: id da NON ricontrollare in questo run perché il loro stato
+    è già stato risolto pochi istanti prima, nello stesso run, da
+    fetch_drafts_and_aborted() (che scrive direttamente 'is_draft' letto
+    da Datatracker). Senza questo filtro, ogni draft appena scoperto in
+    un run "da zero" verrebbe ricontrollato una seconda volta con
+    bypass_cache=True subito dopo essere stato scritto, raddoppiando
+    inutilmente le richieste proprio nella run più pesante. 
+    Non riguarda i run successivi: un draft che sopravvive da un
+    run all'altro non è mai in skip_ids, e viene ricontrollato come
+    prima con dati sempre freschi.
+
+    Tre esiti possibili per un draft 'active'/'expired' ricontrollato:
+      - ancora active/expired: nessun cambiamento, resta candidato per il
+        prossimo ricontrollo futuro.
+      - diventato dead/repl: aggiorniamo il nodo sul posto
+        (is_draft=False, is_aborted=True, status=nuovo slug) e da qui in
+        poi non verra' piu' ricontrollato (e' terminale).
+      - qualsiasi altro esito (tipicamente: pubblicato come RFC, quindi
+        non ha piu' uno stato di tipo 'draft' risolvibile, oppure il
+        documento non e' piu' raggiungibile via /doc/document/): il nodo
+        draft viene rimosso dal dataset. Il documento risultante (l'RFC)
+        arriva separatamente dal parsing di rfc-index.xml nella fase 1;
+        qui ci limitiamo a non lasciare un nodo draft ormai falso.
+
+    La lista dei draft da controllare viene ordinata per id (ordine
+    deterministico tra run, a differenza dell'ordine di iterazione di un
+    dict che puo' cambiare se nel frattempo sono stati aggiunti nodi).
+    Se resume_after_id è valorizzato (ripresa da un run precedente
+    interrotto a meta' ricontrollo), i nodi fino a quell'id incluso
+    vengono saltati: un'interruzione a meta' non costringe piu' a
+    ripartire dal primo nodo della lista.
+    Se on_progress è fornito, viene chiamato dopo OGNI nodo con esito
+    DEFINITIVO (non su un fallimento transitorio) con l'id appena
+    processato, cosi' il chiamante puo' fare checkpoint periodici (nodi
+    aggiornati/rimossi + id di ripresa) senza perdere il lavoro gia'
+    fatto in caso di interruzione.
+    Se on_transient_failure è fornito, viene chiamato ogni volta che un
+    nodo fallisce in modo transitorio. Il chiamante deve usarlo per
+    smettere di far avanzare resume_after_id da quel punto in poi in
+    questo stesso run: senza questa cautela, un nodo fallito
+    transitoriamente ma seguito (in ordine alfabetico) da nodi risolti
+    con successo verrebbe "scavalcato" dal resume e MAI PIU' ritentato
+    finche' un run intero non si completa senza interruzioni.
+
+    Ritorna (n_aggiornati_ad_aborted, n_rimossi, n_rimandati_a_retry_futuro).
+    Muta result_nodes in place (aggiornamenti e rimozioni)."""
+    skip_ids = skip_ids or set()
+    to_check = sorted(
+        (n for n in result_nodes.values() if n.get("is_draft") is True and n["id"] not in skip_ids),
+        key=lambda n: n["id"],
+    )
+    total_candidates = len(to_check)
+    if resume_after_id:
+        to_check = [n for n in to_check if n["id"] > resume_after_id]
+        if total_candidates:
+            log.info(
+                "Riprendo il ricontrollo draft attivi da dopo '%s' (non riparto da zero): "
+                "%d/%d nodi restanti.",
+                resume_after_id, len(to_check), total_candidates,
+            )
+    updated_to_aborted = 0
+    removed = 0
+    retried_later_count = 0
+
+    log.info("Ricontrollo draft attivi/scaduti: %d nodi da verificare...", len(to_check))
+
+    for i, node in enumerate(to_check, start=1):
+        if i % 50 == 0:
+            log.info("  ... avanzamento ricontrollo: %d/%d nodi verificati", i, len(to_check))
+
+        node_id = node["id"]
+        old_status = node.get("status")
+        doc_metadata, doc_metadata_definitive = fetch_rfc_doc_metadata(node["id"], bypass_cache=True)
+        if not doc_metadata_definitive:
+            # Fallimento transitorio: il nodo resta invariato (ancora
+            # is_draft=True) e verra' ricontrollato al prossimo run --
+            # NON lo trattiamo come "diventato non-draft".
+            log.warning("  [%d/%d] %s: fallimento transitorio, rimandato al prossimo run", i, len(to_check), node["id"])
+            retried_later_count += 1
+            if on_transient_failure:
+                on_transient_failure()
+            continue
+
+        if doc_metadata is None:
+            # 404 definitivo su un id che prima esisteva: non piu'
+            # risolvibile in modo autorevole, va tolto dal dataset invece
+            # di restare un draft "fantasma".
+            log.info("  [%d/%d] %s: non piu' risolvibile (404) -- RIMOSSO dal dataset (era %s)", i, len(to_check), node["id"], old_status)
+            del result_nodes[node["id"]]
+            removed += 1
+            continue
+
+        state_slug, state_definitive = resolve_document_state_slug(doc_metadata)
+        if not state_definitive:
+            log.warning("  [%d/%d] %s: fallimento transitorio nella risoluzione dello stato, rimandato al prossimo run", i, len(to_check), node["id"])
+            retried_later_count += 1
+            if on_transient_failure:
+                on_transient_failure()
+            continue
+
+        if state_slug in ("active", "expired"):
+            # Nessun cambiamento, ma il ricontrollo per QUESTO run e'
+            # comunque completo per questo id: segnaliamo il progresso
+            # cosi' un'interruzione successiva non lo rifa' ripartire da
+            # qui. Al prossimo run "all"/"enrich" (senza --force) sara'
+            # comunque ricontrollato di nuovo, dato che resta is_draft=True.
+            if on_progress:
+                on_progress(node_id)
+            continue  # nessun cambiamento: resta draft, ricontrollato in futuro
+
+        if state_slug in ("dead", "repl"):
+            log.info("  [%d/%d] %s: %s -> %s (draft -> abortito)", i, len(to_check), node["id"], old_status, state_slug)
+            node["status"] = state_slug
+            node["is_draft"] = False
+            node["is_aborted"] = True
+            updated_to_aborted += 1
+            if on_progress:
+                on_progress(node_id)
+            continue
+
+        # state_slug è None (nessuno stato di tipo 'draft' trovato, tipico
+        # di un documento ormai pubblicato come RFC) o un altro slug non
+        # gestito: il draft non è più tale, esce dal dataset.
+        log.info(
+            "  [%d/%d] %s: %s -> %s -- RIMOSSO dal dataset (probabile pubblicazione come RFC)",
+            i, len(to_check), node["id"], old_status, state_slug or "nessuno stato draft",
+        )
+        del result_nodes[node["id"]]
+        removed += 1
+        if on_progress:
+            on_progress(node_id)
+
+    log.info(
+        "Ricontrollo draft attivi/scaduti completato: %d ricontrollati | %d passati ad abortito (dead/repl) | "
+        "%d rimossi (non più draft) | %d rimandati a un retry futuro (fallimento transitorio)",
+        len(to_check), updated_to_aborted, removed, retried_later_count,
+    )
+    return updated_to_aborted, removed, retried_later_count
 
 
 def load_graph(input_path: Path) -> dict:
@@ -783,7 +985,10 @@ def load_enricher_state(state_file: Path) -> dict:
     if state_file.exists():
         with state_file.open("r", encoding="utf-8") as f:
             return json.load(f)
-    return {"enriched_ids": [], "excluded_ids": [], "last_run_iso": None, "last_draft_fetch_iso": None}
+    return {
+        "enriched_ids": [], "excluded_ids": [], "last_run_iso": None,
+        "last_draft_fetch_iso": None, "draft_recheck_resume_id": None,
+    }
 
 
 def checkpoint(result_nodes: dict, all_edges: list, enriched_ids: set, excluded_ids: set,
@@ -807,7 +1012,10 @@ def checkpoint(result_nodes: dict, all_edges: list, enriched_ids: set, excluded_
 def run_enrich(args) -> None:
     state = load_enricher_state(args.state_file)
     if args.force:
-        state = {"enriched_ids": [], "excluded_ids": [], "last_run_iso": None, "last_draft_fetch_iso": None}
+        state = {
+            "enriched_ids": [], "excluded_ids": [], "last_run_iso": None,
+            "last_draft_fetch_iso": None, "draft_recheck_resume_id": None,
+        }
 
     graph = load_graph(args.input)
     all_nodes = graph.get("nodes", [])
@@ -836,7 +1044,7 @@ def run_enrich(args) -> None:
                 # come processato. Resta fuori da result_nodes, quindi il
                 # prossimo run lo rimette in to_process e lo ritenta per
                 # intero, invece di lasciarlo per sempre con layer/WG
-                # mancanti come se fosse un esito certo (bug corretto qui).
+                # mancanti come se fosse un esito certo.
                 retried_later_count += 1
                 if i % CHECKPOINT_EVERY == 0:
                     checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
@@ -877,12 +1085,14 @@ def run_enrich(args) -> None:
             log.info("Riprendo il fetch draft dalla pagina interrotta in precedenza (non riparto da zero).")
 
         pages_since_checkpoint = 0
+        newly_fetched_draft_ids: set = set()
 
         def _on_draft_page(page_nodes: list, next_path: Optional[str]) -> None:
             nonlocal pages_since_checkpoint
             for dn in page_nodes:
                 result_nodes[dn["id"]] = dn
                 enriched_ids.add(dn["id"])
+                newly_fetched_draft_ids.add(dn["id"])
             state["draft_fetch_resume_path"] = next_path
             pages_since_checkpoint += 1
             if pages_since_checkpoint >= DRAFT_CHECKPOINT_EVERY_PAGES:
@@ -908,6 +1118,79 @@ def run_enrich(args) -> None:
 
         state["draft_fetch_resume_path"] = None
         state["last_draft_fetch_iso"] = now_naive_for_filter()
+
+        # Ricontrollo dei draft 'active'/'expired' già presenti nel dataset
+        # (non solo fetch dei nuovi): un draft attivo può nel frattempo
+        # essere diventato RFC, dead o repl, e senza questo passaggio
+        # resterebbe per sempre marcato 'active' anche a transizione
+        # avvenuta (vedi nota in fetch_drafts_and_aborted). Eseguito nello
+        # stesso gate di --skip-drafts perché è concettualmente parte
+        # della gestione dei draft.
+        #
+        # Resume: come per il fetch draft/aborted sopra, se il ricontrollo
+        # era stato interrotto a metà in un run precedente riprendiamo da
+        # dopo l'ultimo id ricontrollato invece di rifare da capo tutti i
+        # nodi.
+        recheck_resume_after_id = None if args.force else state.get("draft_recheck_resume_id")
+        if recheck_resume_after_id:
+            log.info("Riprendo il ricontrollo draft dalla posizione interrotta in precedenza (non riparto da zero).")
+
+        nodes_since_recheck_checkpoint = 0
+        # Una volta che un nodo fallisce in modo transitorio in questo run,
+        # congeliamo l'avanzamento del resume (vedi docstring di
+        # recheck_active_drafts): altrimenti, in caso di interruzione
+        # successiva, quel nodo fallito resterebbe "prima" del punto di
+        # ripresa salvato e non verrebbe mai piu' ritentato finche' un run
+        # intero non si completa senza interruzioni.
+        resume_frozen = False
+
+        def _on_recheck_progress(processed_id: str) -> None:
+            nonlocal nodes_since_recheck_checkpoint
+            if not resume_frozen:
+                state["draft_recheck_resume_id"] = processed_id
+            nodes_since_recheck_checkpoint += 1
+            if nodes_since_recheck_checkpoint >= DRAFT_RECHECK_CHECKPOINT_EVERY_NODES:
+                nodes_since_recheck_checkpoint = 0
+                checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
+                           args.output, args.state_file, label="ricontrollo draft in corso")
+
+        def _on_recheck_transient_failure() -> None:
+            nonlocal resume_frozen
+            resume_frozen = True
+
+        try:
+            _, n_removed, _ = recheck_active_drafts(
+                result_nodes,
+                resume_after_id=recheck_resume_after_id,
+                on_progress=_on_recheck_progress,
+                on_transient_failure=_on_recheck_transient_failure,
+                skip_ids=newly_fetched_draft_ids,
+            )
+        except KeyboardInterrupt:
+            checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
+                       args.output, args.state_file, label="ricontrollo draft interrotto (Ctrl+C)")
+            log.warning("Interrotto durante il ricontrollo draft: rilancia lo stesso comando per riprendere da qui.")
+            raise
+        except Exception:
+            checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
+                       args.output, args.state_file, label="ricontrollo draft: crash imprevisto")
+            log.exception("Errore imprevisto nel ricontrollo draft: stato salvato, rilancia per riprendere da qui.")
+            raise
+
+        # Ricontrollo completato per intero in questo run (nessuna
+        # interruzione): resettiamo il resume, cosi' il prossimo run parte
+        # da capo su TUTTI i draft attivi rimasti (e' un ricontrollo
+        # periodico completo, non un lavoro "una tantum" da esaurire).
+        state["draft_recheck_resume_id"] = None
+        if n_removed:
+            # Alcuni id sono usciti dal dataset: teniamo enriched_ids/
+            # excluded_ids coerenti (non è critico per la logica attuale,
+            # che si basa su result_nodes, ma evita id "fantasma" nello
+            # stato salvato).
+            enriched_ids = enriched_ids & set(result_nodes.keys())
+            excluded_ids = excluded_ids & set(result_nodes.keys())
+        checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
+                   args.output, args.state_file, label="ricontrollo draft attivi")
 
     checkpoint(result_nodes, all_edges, enriched_ids, excluded_ids, state,
                args.output, args.state_file, label="run completo")

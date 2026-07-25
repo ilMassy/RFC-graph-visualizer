@@ -1,6 +1,6 @@
 # RFC Graph Visualizer — Aggiornamenti 3
 
-**Stato:** rispetto al documento precedente, tutta la struttura del sistema — JSON, backend, frontend a due viste — resta invariata: quello che cambia sono due punti rimasti aperti nel documento 2. Primo, il bug segnalato al punto 3 (i bucket "n.d." dell'istogramma draft più affollati del dovuto) è stato **corretto direttamente in `draft_metadata_enricher.py`**, e per non lasciare "orfano" lo stato già scritto dalle esecuzioni passate con la versione buggata dello script è stato aggiunto uno script di riparazione una tantum, `repair_draft_state.py`. Secondo, la proposta di automazione discussa al punto 12 è stata **decisa**: i due script backend sono ora agganciati al ciclo di vita di `npm` (`prestart`/`prebuild`) tramite `backend/update_dataset.sh`, invece che a uno scheduler/timer indipendente. Questo documento riporta per intero, come il precedente, tutta la struttura del sistema — non solo le due novità — per restare autosufficiente.
+**Stato:** rispetto al documento precedente, tutta la struttura del sistema — JSON, backend, frontend a due viste — resta invariata: quello che cambia sono due punti rimasti aperti nel documento 2. Primo, il bug segnalato al punto 3 (i bucket "n.d." dell'istogramma draft più affollati del dovuto) è stato **corretto direttamente in `draft_metadata_enricher.py`**, e per non lasciare "orfano" lo stato già scritto dalle esecuzioni passate con la versione buggata dello script è stato aggiunto uno script di riparazione una tantum, `repair_draft_state.py`. Secondo, la proposta di automazione discussa al punto 12 è stata **decisa**: i tre script backend sono ora agganciati al ciclo di vita di `npm` (`prestart`/`prebuild`) tramite `backend/update_dataset.sh`, invece che a uno scheduler/timer indipendente. Questo documento riporta per intero, come il precedente, tutta la struttura del sistema — non solo le due novità — per restare autosufficiente.
 
 **Nota di lettura:** questo documento è autosufficiente — ogni campo, componente e scelta implementativa è spiegato qui per intero. Non è necessario aver letto `aggiornamenti_e_proposte_1.md` o `aggiornamenti_e_proposte_2.md` per seguirlo: i richiami ai "documenti precedenti" servono solo a tracciare cosa è cambiato rispetto ai piani/proposte precedenti, e riportano già il contesto necessario a capirli senza dover andare a controllare le versioni precedenti.
 
@@ -18,7 +18,7 @@ Il sistema è pensato per due profili di utente distinti, con esigenze diverse a
 ## Indice
 
 0. [A chi è rivolto il sistema](#0-a-chi-è-rivolto-il-sistema)
-1. [Backend: nuovo script `draft_metadata_enricher.py`](#1-backend-nuovo-script-draft_metadata_enricherpy)
+1. [Backend: cosa combina l'intera pipeline, e i casi rari non trattati](#1-backend-cosa-combina-lintera-pipeline-e-i-casi-rari-non-trattati)
 2. [Struttura del JSON — ogni campo, e se è sempre presente](#2-struttura-del-json--ogni-campo-e-se-è-sempre-presente)
 3. [Il problema degli "n.d." nell'istogramma draft — risolto](#3-il-problema-degli-nd-nellistogramma-draft--risolto)
 4. [Come vengono ricavati draft e aborted — dettaglio dei campi `year` e `url`](#4-come-vengono-ricavati-draft-e-aborted--dettaglio-dei-campi-year-e-url)
@@ -34,9 +34,26 @@ Il sistema è pensato per due profili di utente distinti, con esigenze diverse a
 
 ---
 
-## 1. Backend: nuovo script `draft_metadata_enricher.py`
+## 1. Backend: cosa combina l'intera pipeline, e i casi rari non trattati
 
-È stato aggiunto un secondo passaggio di arricchimento, **volutamente separato** da `rfc_pipeline.py` invece che incorporato in esso, per tenere distinte le due responsabilità: `rfc_pipeline.py` costruisce il grafo (parsing + layer/working group), questo script si occupa solo di completare i campi che mancavano sui nodi Internet-Draft/aborted.
+### 1.1 Panoramica end-to-end
+
+Il backend è composto da tre script Python indipendenti più uno script bash di orchestrazione, eseguiti sempre nello stesso ordine contro lo stesso file di output finale (`graph_data_enriched.json`):
+
+1. **`rfc_pipeline.py parse`** — legge (o scarica in modo condizionale, via ETag/Last-Modified) `rfc-index.xml`, estrae ogni entry RFC, costruisce nodi e archi Updates/Obsoletes (escludendo le coppie contraddittorie, punto 2.3), calcola `impact_score` con il PageRank pesato (punto 8.1), e fa il merge con un `graph_data.json` preesistente invece di ripartire da zero. Il flag `--offline` permette di passare un XML locale custom (es. un sample) senza rischio che venga sovrascritto da un download (punto 13).
+2. **`rfc_pipeline.py enrich`** — tre passaggi in sequenza sullo stesso comando:
+   - arricchisce ogni nodo RFC **non ancora processato** con `layer` e `working_group`, risolti da Datatracker (override manuale o area IETF, mai un'euristica testuale come ripiego);
+   - interroga Datatracker per i documenti in stato bozza (`fetch_drafts_and_aborted`) non ancora presenti nel dataset, filtrando per data (`time__gte`) dal secondo run in poi per non ripescare l'intero storico ogni volta;
+   - ricontrolla lo stato dei soli draft ancora `active`/`expired` già nel dataset (`recheck_active_drafts`), aggiornandoli a `dead`/`repl` o rimuovendoli se nel frattempo sono stati pubblicati come RFC.
+3. **`draft_metadata_enricher.py`** — secondo passaggio, deliberatamente separato dal precedente, che completa `url` (deterministico) e `year` (via Datatracker) sui soli nodi draft/aborted, e normalizza `abstract` su **tutti** i nodi del dataset.
+4. **`purge_phantom_draft_nodes.py`** — passaggio di chiusura, ora integrato nella pipeline invece di restare un intervento una tantum lanciato a mano: rimuove dal dataset già scritto gli eventuali nodi "fantasma" con `is_draft`/`is_aborted` entrambi `null` (e i relativi archi, anche se per costruzione questi nodi non ne hanno mai avuti). Erano un residuo di `fetch_drafts_and_aborted()`: se Datatracker non restituiva alcuno stato di tipo "draft" per un documento che pure soddisfaceva il filtro `states__type__slug=draft` della query (caso anomalo), il nodo veniva comunque scritto nel dataset con entrambi i campi a `null` — un valore che non passava il filtro di nessuna delle due viste frontend e non veniva mai più ricontrollato o rimosso. La generazione di *nuovi* nodi fantasma è già prevenuta a monte in `fetch_drafts_and_aborted()` (il documento anomalo, semplicemente, non viene più aggiunto al dataset in quel run); questo script è il completamento simmetrico di quella correzione, per ripulire retroattivamente eventuali nodi fantasma già scritti da esecuzioni precedenti alla correzione. Su un dataset generato interamente con la versione corretta non trova nulla da fare e non scrive nulla: è a tutti gli effetti un backstop di sicurezza, non un passaggio che normalmente altera il file.
+5. **`update_dataset.sh`** — orchestratore, agganciato agli hook npm `prestart`/`prebuild` (punto 12): esegue i quattro passaggi precedenti in sequenza, scrivendo direttamente nel file servito dal frontend, con un passo preliminare di riconciliazione dello stato di enrich rispetto al dataset già presente su disco.
+
+Ogni fase, in ogni script, segue la stessa disciplina: stato persistito su disco, cache HTTP (inclusi i 404), checkpoint periodici con scrittura atomica, e — punto centrale ripetuto ovunque nel codice — distinzione esplicita tra un esito **definitivo** (200 risolto, 404, o un 200 privo del campo cercato: tutti fatti certi, scrivibili una volta per sempre) e un esito **transitorio** (timeout, errore di rete, rate limit non risolto dopo i retry: mai scritto come dato definitivo, il nodo resta "da processare" e viene ritentato per intero al run successivo). Questa disciplina è ciò che rende l'intera pipeline **resumibile** a qualunque interruzione (Ctrl+C o crash) senza mai produrre un `null` che in realtà nascondeva solo un fallimento di rete.
+
+### 1.2 `draft_metadata_enricher.py` nel dettaglio
+
+È stato aggiunto come secondo passaggio di arricchimento, **volutamente separato** da `rfc_pipeline.py` invece che incorporato in esso, per tenere distinte le due responsabilità: `rfc_pipeline.py` costruisce il grafo (parsing + layer/working group), questo script si occupa solo di completare i campi che mancavano sui nodi Internet-Draft/aborted.
 
 Nel primo documento era stato segnalato come problema che i draft avessero sempre `year: null` e nessun `url`. Questo script è la risposta concreta a quel problema:
 
@@ -55,6 +72,14 @@ Il resto dello script ricalca deliberatamente la stessa filosofia di `rfc_pipeli
 Pensato per essere lanciato **dopo** ogni `rfc_pipeline.py enrich`, oggi automatizzato tramite `update_dataset.sh` (punto 12).
 
 **Novità di questo documento**: il problema segnalato al punto 3 del documento precedente — il bug per cui un fallimento transitorio nella risoluzione di `year` veniva scambiato per un esito definitivo, "bloccando" per sempre un draft nel bucket "n.d." — è stato **corretto** nel codice dello script. Il dettaglio della correzione, e la riparazione dello stato già scritto dalle esecuzioni precedenti alla correzione, sono al punto 3.
+
+### 1.3 Casi rari e situazioni non (ancora) trattate
+
+La disciplina definitivo/transitorio (punto 1.1) copre la stragrande maggioranza dei casi, ma restano alcune situazioni note, marginali, che il codice attuale non gestisce:
+
+- **Un RFC arricchito una volta non viene mai più riconsiderato.** `run_enrich()` decide cosa processare guardando solo se l'id è già presente nel file di output (`n["id"] not in result_nodes`): una volta che `layer`/`working_group` sono stati risolti per un RFC, restano quelli per sempre, anche se in futuro Datatracker corregge quella classificazione (gruppo riassegnato, area cambiata) o se `MANUAL_LAYER_OVERRIDES` viene modificato nel codice. Il meccanismo di ricontrollo periodico esiste solo per i draft attivi/scaduti (`recheck_active_drafts`), non per gli RFC pubblicati. L'unico modo per propagare una correzione a valle è `--force`, che però ricostruisce l'intero dataset da zero, perdendo l'incrementalità.
+- **Un XML in input con namespace diverso da quello atteso non genera errore.** Il parser cerca elementi con il namespace fisso `https://www.rfc-editor.org/rfc-index`; se un file passato con `--offline` (ad esempio un sample per test) dichiara un namespace diverso o una struttura diversa da quella dell'indice IETF reale, `root.findall(...)` restituisce semplicemente zero risultati. Lo script logga "Entry totali parsate: 0" e prosegue producendo un dataset vuoto, senza sollevare un'eccezione che segnali il problema.
+- **`compute_impact_scores()` non è un PageRank puro.** Il termine aggiuntivo di "authority boost" (proporzionale al numero grezzo di archi entranti, punto 8.1) viene sommato direttamente al rank ad ogni iterazione: questo rompe l'invarianza per cui la somma dei rank dovrebbe restare costante tra un'iterazione e l'altra. È una scelta euristica dichiarata nel codice, non un bug, ma va tenuto presente se in futuro si volesse confrontare o riprodurre i punteggi con un'implementazione di PageRank standard.
 
 ---
 
@@ -400,7 +425,7 @@ Riepilogo puntuale delle differenze tra quanto proposto/segnalato nei documenti 
 
 Il documento precedente metteva a confronto tre strade per l'esecuzione dei due script backend (automatica su timer/scheduler, manuale su richiesta, o una via di mezzo con staging + promozione manuale), senza sciogliere la scelta. È stata presa una quarta strada, non elencata esplicitamente tra quelle tre: **agganciare l'esecuzione al ciclo di vita di `npm`**, invece che a un timer indipendente.
 
-Concretamente, `backend/update_dataset.sh` esegue in sequenza `rfc_pipeline.py all` e `draft_metadata_enricher.py`, scrivendo direttamente in `infovis/public/data/graph_data_enriched.json` (nessuna cartella intermedia, nessuna copia manuale). Gli hook `prestart` e `prebuild` di `infovis/package.json` lo richiamano automaticamente prima, rispettivamente, di `ng serve` e `ng build`: chi lancia `npm start` o `npm run build` ottiene sempre il dataset rigenerato, senza doversene ricordare.
+Concretamente, `backend/update_dataset.sh` esegue in sequenza `rfc_pipeline.py all`, `draft_metadata_enricher.py` e `purge_phantom_draft_nodes.py` (punto 1.1), scrivendo direttamente in `infovis/public/data/graph_data_enriched.json` (nessuna cartella intermedia, nessuna copia manuale). Gli hook `prestart` e `prebuild` di `infovis/package.json` lo richiamano automaticamente prima, rispettivamente, di `ng serve` e `ng build`: chi lancia `npm start` o `npm run build` ottiene sempre il dataset rigenerato, senza doversene ricordare.
 
 Perché questa strada e non le tre discusse nel documento precedente:
 

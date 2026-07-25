@@ -257,10 +257,22 @@ def run(
     )
 
     def do_checkpoint(label: str) -> None:
+        # Ordine invertito rispetto alla versione precedente: il grafo (che
+        # contiene i dati effettivi, url/year) viene salvato PRIMA dello stato
+        # (che segna gli id come "processati"). Se il processo viene
+        # interrotto (crash, kill, sospensione del sistema) tra le due
+        # scritture, il caso peggiore possibile è un id non ancora marcato
+        # come processato pur avendo già i dati corretti su disco: al run
+        # successivo needs_enrichment() lo ripropone, ma la cache HTTP
+        # (già scritta) viene riletta all'istante senza nuove richieste di
+        # rete. Con l'ordine precedente, la stessa interruzione poteva
+        # marcare un id come "processato" senza che i suoi dati fossero mai
+        # stati scritti, bloccandolo in "n.d." per sempre senza un intervento
+        # manuale (bug osservato e diagnosticato il 25/07/2026).
+        save_json_atomic(output_path, graph)
         state["processed_ids"] = sorted(processed_ids)
         state["last_run_iso"] = now_iso()
         save_state(state_path, state)
-        save_json_atomic(output_path, graph)
         log.info("Checkpoint [%s]: %s nodi processati (stato e output salvati).", label, len(processed_ids))
 
     enriched_count = 0
