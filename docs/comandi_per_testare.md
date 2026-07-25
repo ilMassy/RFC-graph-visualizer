@@ -217,11 +217,18 @@ bash update_dataset.sh
 Da dentro `infovis/` (la root del progetto Angular, non `backend/`), `npm run build` lancia da solo l'hook `prebuild` (sezione 6) e poi la build:
 
 ```bash
-cd ~/Scrivania/INFOVIS/infovis
+cd infovis
 npm run build
 ```
 
 ⚠️ Il warning `Module 'ngraph.forcelayout' used by 'three-forcegraph' is not ESM` è atteso e non bloccante: è una dipendenza CommonJS del motore di force-layout 3D usato dal grafo, la build completa comunque correttamente.
+
+Per rigenerare il frontend dopo una modifica al codice Angular o dopo un aggiornamento del dataset, basta ripetere `npm run build` e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta). Se invece si vuole solo ricompilare Angular senza rilanciare la pipeline dati (dataset già aggiornato), si può usare `npx ng build` per saltare l'hook `prebuild`:
+
+```bash
+cd infovis
+npx ng build
+```
 
 Servire i file statici generati (build in `dist/infovis/browser/`) con il server integrato di PHP, in ascolto solo su localhost:
 
@@ -233,8 +240,6 @@ php -S 127.0.0.1:8888
 A questo punto il frontend è raggiungibile su `http://127.0.0.1:8888`. Per fermare il server: `Ctrl+C`.
 
 **Nota**: questo è un server di sviluppo/test minimale (serve solo file statici, nessuna configurazione di caching/compressione/HTTPS) — va bene per verificare il risultato di una build locale, non è pensato per un deploy in produzione.
-
-Per rigenerare il frontend dopo una modifica al codice Angular o dopo un aggiornamento del dataset, basta ripetere `npm run build` e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta). Se invece si vuole solo ricompilare Angular senza rilanciare la pipeline dati (dataset già aggiornato), si può usare `npx ng build` per saltare l'hook `prebuild`.
 
 ---
 
