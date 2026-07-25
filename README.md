@@ -67,8 +67,9 @@ Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggio
 RFC-graph-visualizer/
 ├── backend/
 │   ├── draft_metadata_enricher.py                                       # Secondo passaggio dopo rfc_pipeline.py, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
+│   ├── purge_phantom_draft_nodes.py                                     # Script per rimuovere "nodi fantasma" con is_draft e is_aborted entrambi nulli 
 │   ├── repair_draft_state.py                                            # Script di pulizia dello stato che sblocca i draft falliti per errori di rete, permettendo di ritentarli
-│   ├── rfc_pipeline.py                                                  # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (sotto-comandi: parse, enrich, all)
+│   ├── rfc_pipeline.py                                                  # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (sotto-comandi: parse, enrich, all) 
 │   ├── sample_rfc_index.xml                                             # Indice RFC di esempio, ridotto, per test rapidi della fase `parse` (usare `--offline` per parsarlo senza toccare la rete)
 │   └── update_dataset.sh                                                # Orchestratore: lancia "rfc_pipeline.py all" + draft_metadata_enricher.py scrivendo direttamente in infovis/public/data/; richiamato in automatico dagli hook npm prestart/prebuild
 ├── docs/
