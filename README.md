@@ -137,7 +137,7 @@ Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`
 2. (opzionale) Creare un virtualenv in `backend/venv`: se assente, lo script ripiega sul `python3` di sistema.
 3. Da `infovis/`, lanciare `npm install` e poi `npm run build` (o `npm start`).
 
-⚠️ Il primo run può richiedere tempo per il rate limiting di Datatracker; i run successivi sono incrementali e molto più veloci. Per i comandi di test dei singoli script backend, le variabili d'ambiente di override (`FRONTEND_DATA_DIR`, `VENV_PYTHON`) e l'alternativa del dataset già pronto, vedi [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md).
+⚠️ Il primo run può richiedere tempo per il rate limiting di Datatracker; i run successivi sono incrementali e molto più veloci. Per i comandi su come avviare il frontend, di test dei singoli script backend, le variabili d'ambiente di override (`FRONTEND_DATA_DIR`, `VENV_PYTHON`) e l'alternativa del dataset già pronto, vedi [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md).
 
 ### Dataset già pronto (alternativa rapida)
 
