@@ -133,7 +133,7 @@ Va lanciato dopo un `enrich` completo (senza `--skip-drafts`). Stesso paradigma 
 
 Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`), ma da quando esiste `backend/update_dataset.sh` la rigenerazione è **automatica**: gli hook `prestart`/`prebuild` di `infovis/package.json` lo lanciano da soli prima di `ng serve`/`ng build`, eseguendo in sequenza `rfc_pipeline.py all` e `draft_metadata_enricher.py` e scrivendo direttamente in `infovis/public/data/graph_data_enriched.json` — non serve più nessuna copia manuale. In sintesi:
 
-1. Clonare il repository.
+1. Clonare il repository `git clone https://github.com/ilMassy/RFC-graph-visualizer.git`.
 2. (opzionale) Creare un virtualenv in `backend/venv`: se assente, lo script ripiega sul `python3` di sistema.
 3. Da `infovis/`, lanciare `npm install` e poi `npm run build` (o `npm start`).
 
