@@ -147,7 +147,7 @@ wget https://github.com/ilMassy/RFC-graph-visualizer/releases/download/dataset-v
 unzip graph_data_enriched.zip -d infovis/public/data/
 ```
 
-⚠️ Il dataset scaricato riflette lo stato delle fonti IETF al momento della generazione (vedi il campo `meta.generated_at` dentro il JSON). Il prossimo `npm run build`/`npm start` rilancerà comunque `update_dataset.sh` sopra questo file: essendo incrementale non lo ricostruisce da zero, ma se `rfc-index.xml` non è già presente in `backend/` il primo di questi run lo scarica comunque.
+⚠️ Il dataset scaricato riflette lo stato delle fonti IETF al momento della generazione (vedi il campo `meta.generated_at` dentro il JSON). Il prossimo `npm run build`/`npm start` rilancerà comunque `update_dataset.sh` sopra questo file: essendo incrementale non lo ricostruisce da zero, ma se `rfc-index.xml` non è già presente in `backend/` il primo di questi run lo scarica comunque. Se non vuoi eseguire `update_dataset.sh` lancia il comando `npx ng build`.
 
 ## Aggiornamenti e proposte
 
