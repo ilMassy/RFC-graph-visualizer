@@ -223,10 +223,11 @@ npm run build
 
 ⚠️ Il warning `Module 'ngraph.forcelayout' used by 'three-forcegraph' is not ESM` è atteso e non bloccante: è una dipendenza CommonJS del motore di force-layout 3D usato dal grafo, la build completa comunque correttamente.
 
-Per rigenerare il frontend dopo una modifica al codice Angular o dopo un aggiornamento del dataset, basta ripetere `npm run build` e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta). Se invece si vuole solo ricompilare Angular senza rilanciare la pipeline dati (dataset già aggiornato), si può usare `npx ng build` per saltare l'hook `prebuild`:
+Per rigenerare il frontend dopo una modifica al codice Angular o dopo un aggiornamento del dataset, basta ripetere `npm run build` e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta). Se invece si vuole solo ricompilare Angular senza rilanciare la pipeline dati (dataset già aggiornato), si può usare `npx ng build` per saltare l'hook `prebuild`, dopo aver scaricato tutte le dipendenze necessarie:
 
 ```bash
 cd infovis
+npm install
 npx ng build
 ```
 
