@@ -38,6 +38,248 @@ const FILTER_DIMMED_LINK_COLOR = '#22262f';
 const FILTER_MATCH_SCALE = 1.2;
 const FILTER_UNMATCHED_SCALE = 0.75;
 
+/** Rileva le "community" del grafo usando SOLO la topologia degli archi
+ *  (Obsoletes/Updates) — nessun attributo come layer o working group.
+ *  Algoritmo: Label Propagation (LPA). Ogni nodo parte con un'etichetta
+ *  propria; ad ogni iterazione adotta l'etichetta più frequente tra i
+ *  suoi vicini (a parità, quella lessicograficamente minore, per
+ *  determinismo). Dopo poche iterazioni le etichette convergono in
+ *  gruppi di nodi densamente interconnessi: esattamente i "cluster" che
+ *  vogliamo separare spazialmente. I nodi isolati (senza archi) restano
+ *  ciascuno nella propria etichetta — non finiscono ammassati in un
+ *  unico gruppo residuo.
+ *  Costo: O(iterazioni × archi), gira UNA volta al caricamento dei dati
+ *  (non ad ogni tick della simulazione), quindi trascurabile anche con
+ *  ~9.800 nodi. */
+function detectCommunities(nodes: GraphNode[], links: GraphLink[]): Map<string, string> {
+  const neighbors = new Map<string, string[]>();
+  for (const n of nodes) neighbors.set(n.id, []);
+  for (const l of links) {
+    const s = typeof l.source === 'string' ? l.source : l.source.id;
+    const t = typeof l.target === 'string' ? l.target : l.target.id;
+    neighbors.get(s)?.push(t);
+    neighbors.get(t)?.push(s);
+  }
+
+  const label = new Map<string, string>();
+  for (const n of nodes) label.set(n.id, n.id);
+
+  const order = nodes.map(n => n.id);
+  const MAX_ITERATIONS = 8;
+
+  for (let iter = 0; iter < MAX_ITERATIONS; iter++) {
+    // Ordine casuale ad ogni iterazione: LPA converge meglio ed evita che
+    // due etichette oscillino a vicenda se i nodi si processano sempre
+    // nello stesso ordine.
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    let changed = false;
+    for (const id of order) {
+      const neigh = neighbors.get(id)!;
+      if (neigh.length === 0) continue;
+
+      const counts = new Map<string, number>();
+      for (const nb of neigh) {
+        const l = label.get(nb)!;
+        counts.set(l, (counts.get(l) ?? 0) + 1);
+      }
+
+      let bestLabel = label.get(id)!;
+      let bestCount = -1;
+      for (const [l, count] of counts) {
+        if (count > bestCount || (count === bestCount && l < bestLabel)) {
+          bestLabel = l;
+          bestCount = count;
+        }
+      }
+
+      if (bestLabel !== label.get(id)) {
+        label.set(id, bestLabel);
+        changed = true;
+      }
+    }
+    if (!changed) break;
+  }
+
+  return label;
+}
+
+/** Forza custom per d3-force(-3d): ad ogni tick fa DUE cose, non solo
+ *  l'attrazione verso il centroide.
+ *
+ *  1) COESIONE: tira ogni nodo verso il centroide della propria community
+ *     (rilevata da `detectCommunities`, quindi basata solo su nodi+archi).
+ *  2) SEPARAZIONE NETTA: spinge i centroidi di community DIVERSE lontani
+ *     l'uno dall'altro finché la distanza tra loro non supera una soglia
+ *     minima (`minSeparation` + un raggio stimato in base a quanti membri
+ *     ha ciascuna community). Questa è la parte che prima mancava: senza
+ *     di essa la separazione tra cluster era solo un effetto emergente
+ *     del charge generico, che non sa nulla dei cluster e quindi non
+ *     garantiva nessun margine minimo — due community potevano finire
+ *     vicine o parzialmente sovrapposte. Ora è un vincolo imposto: se due
+ *     centroidi sono troppo vicini vengono attivamente allontanati, quindi
+ *     il risultato finale ha SEMPRE un vuoto visibile tra un cluster e
+ *     l'altro, non solo "in media".
+ *
+ *  Le due forze si compongono nello stesso passaggio: il bersaglio verso
+ *  cui ogni nodo viene attratto non è il centroide grezzo, ma il
+ *  centroide + l'eventuale spostamento imposto dalla repulsione tra
+ *  cluster (`offset`, sotto).
+ *
+ *  Costo per tick: O(n) per accumulare/normalizzare i centroidi e per
+ *  applicare la forza ai nodi, più O(k²) per la repulsione a coppie tra
+ *  centroidi, dove k = numero di community con almeno `MIN_CLUSTER_SIZE`
+ *  membri (i cluster minuscoli/i nodi isolati sono esclusi da questo
+ *  confronto a coppie, altrimenti k coinciderebbe quasi con n). Con
+ *  ~9.800 nodi k resta tipicamente un ordine di grandezza più piccolo,
+ *  quindi il costo aggiuntivo è trascurabile rispetto a charge/collide. */
+function forceCluster(groupKeyFor: (n: GraphNode) => string, strength: number, minSeparation: number) {
+  type SimNode = GraphNode & { x: number; y: number; z: number; vx: number; vy: number; vz: number };
+  let nodes: SimNode[] = [];
+
+  // Sotto questa soglia di membri una community non entra nel confronto
+  // O(k²) "a coppie di sfere" (vedi sotto), ma non per questo è esclusa
+  // dalla repulsione: partecipa comunque come bersaglio nei confronti
+  // con i cluster grandi, così anche i cluster minuscoli/i nodi isolati
+  // vengono spinti fuori da un cluster grande in cui fossero rimasti
+  // intrappolati, invece di essere ignorati come nella versione precedente.
+  const MIN_CLUSTER_SIZE = 4;
+  // Repulsione tra cluster più aggressiva della coesione (2.4× invece
+  // di 1.6×): deve "vincere" nettamente contro l'attrazione verso il
+  // proprio centroide quando le due forze sono in conflitto, altrimenti
+  // il margine minimo tra cluster resta risicato invece che netto.
+  const INTER_CLUSTER_STRENGTH = strength * 2.4;
+  // Limita lo spostamento imposto a un singolo cluster in un singolo
+  // tick: con molti cluster che si respingono a vicenda nello stesso
+  // istante, l'offset accumulato su una community molto "conflittuale"
+  // potrebbe altrimenti superare di gran lunga quello delle altre e
+  // produrre uno scatto visivo invece di un riassestamento fluido.
+  // Espresso come multiplo di minSeparation, così scala in automatico
+  // con la scena invece di essere una costante arbitraria.
+  const MAX_OFFSET_PER_TICK = minSeparation * 0.5;
+
+  function force(alpha: number): void {
+    // Accumula centroide e dispersione (somma degli scarti quadratici
+    // dal centroide) in due passaggi sui nodi: la dispersione richiede
+    // il centroide già finale, quindi non si può fare in un solo giro.
+    const stats = new Map<
+      string,
+      { x: number; y: number; z: number; count: number; sqSum: number }
+    >();
+    for (const n of nodes) {
+      const key = groupKeyFor(n);
+      let c = stats.get(key);
+      if (!c) stats.set(key, (c = { x: 0, y: 0, z: 0, count: 0, sqSum: 0 }));
+      c.x += n.x;
+      c.y += n.y;
+      c.z += n.z;
+      c.count++;
+    }
+    for (const c of stats.values()) {
+      c.x /= c.count;
+      c.y /= c.count;
+      c.z /= c.count;
+    }
+    for (const n of nodes) {
+      const c = stats.get(groupKeyFor(n))!;
+      const dx = n.x - c.x;
+      const dy = n.y - c.y;
+      const dz = n.z - c.z;
+      c.sqSum += dx * dx + dy * dy + dz * dz;
+    }
+
+    // Raggio "d'ingombro" di una community: combina una stima basata sul
+    // conteggio (radice cubica, perché i nodi si dispongono in volume,
+    // non in linea) con la dispersione REALE misurata (RMS delle
+    // distanze dal centroide). Il max delle due evita che una community
+    // compatta ma numerosa risulti sovrastimata, e che una community
+    // sparpagliata (per coesione debole o pochi tick trascorsi) risulti
+    // invece sottostimata rispetto al suo reale ingombro visivo.
+    const clusterRadius = (c: { count: number; sqSum: number }): number => {
+      const byCount = 35 * Math.cbrt(c.count);
+      const bySpread = c.count > 0 ? Math.sqrt(c.sqSum / c.count) : 0;
+      return Math.max(byCount, bySpread);
+    };
+
+    const allClusters = [...stats.entries()];
+    const offset = new Map<string, { x: number; y: number; z: number }>();
+    for (const [key] of allClusters) offset.set(key, { x: 0, y: 0, z: 0 });
+
+    for (let i = 0; i < allClusters.length; i++) {
+      const [keyA, a] = allClusters[i];
+      // I cluster piccoli partecipano solo come bersaglio (ricevono
+      // spinta se troppo vicini a un cluster grande), non generano a
+      // loro volta un confronto contro tutti gli altri cluster piccoli:
+      // altrimenti MIN_CLUSTER_SIZE non filtrerebbe nulla e il costo
+      // tornerebbe O(k²) su k ≈ numero di community totali.
+      const aIsBig = a.count >= MIN_CLUSTER_SIZE;
+
+      for (let j = i + 1; j < allClusters.length; j++) {
+        const [keyB, b] = allClusters[j];
+        const bIsBig = b.count >= MIN_CLUSTER_SIZE;
+        if (!aIsBig && !bIsBig) continue;
+
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const dz = a.z - b.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.001;
+        const target = minSeparation + clusterRadius(a) + clusterRadius(b);
+        if (dist >= target) continue;
+
+        const push = ((target - dist) / dist) * INTER_CLUSTER_STRENGTH * alpha;
+        const ox = dx * push;
+        const oy = dy * push;
+        const oz = dz * push;
+        const oa = offset.get(keyA)!;
+        oa.x += ox;
+        oa.y += oy;
+        oa.z += oz;
+        const ob = offset.get(keyB)!;
+        ob.x -= ox;
+        ob.y -= oy;
+        ob.z -= oz;
+      }
+    }
+
+    // Clamp finale: se l'offset accumulato su un cluster (per via di più
+    // conflitti simultanei con vicini diversi) supera il tetto per-tick,
+    // lo si rinormalizza mantenendo solo la direzione, per uno
+    // spostamento sempre fluido indipendentemente da quanti vicini lo
+    // respingono nello stesso istante.
+    for (const off of offset.values()) {
+      const mag = Math.sqrt(off.x * off.x + off.y * off.y + off.z * off.z);
+      if (mag > MAX_OFFSET_PER_TICK) {
+        const scale = MAX_OFFSET_PER_TICK / mag;
+        off.x *= scale;
+        off.y *= scale;
+        off.z *= scale;
+      }
+    }
+
+    const k = strength * alpha;
+    for (const n of nodes) {
+      const key = groupKeyFor(n);
+      const c = stats.get(key)!;
+      const off = offset.get(key);
+      const tx = c.x + (off?.x ?? 0);
+      const ty = c.y + (off?.y ?? 0);
+      const tz = c.z + (off?.z ?? 0);
+      n.vx -= (n.x - tx) * k;
+      n.vy -= (n.y - ty) * k;
+      n.vz -= (n.z - tz) * k;
+    }
+  }
+
+  force.initialize = (_nodes: GraphNode[]): void => {
+    nodes = _nodes as SimNode[];
+  };
+
+  return force;
+}
+
 /**
  * GraphCanvasComponent — Opzione 1 del menu: "Visualizza grafo degli RFC"
  * =========================================================================
@@ -101,11 +343,15 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
 
   // Palette Okabe-Ito (colorblind-safe): non solo tonalità diverse, ma
   // anche luminosità diverse tra loro, per restare leggibili anche
-  // quando la sola discriminazione cromatica è compromessa.
+  // quando la sola discriminazione cromatica è compromessa. Il verde-teal
+  // originale di Network è stato sostituito con il giallo Okabe-Ito
+  // (#F0E442, anch'esso colorblind-safe): il verde non ha equivalenti tra
+  // i colori delle stelle, mentre il giallo richiama una stella di tipo G
+  // come il Sole.
   readonly layerColors: Record<DisplayLayer, string> = {
     Application: '#FF7A3D',
     Transport: '#7FD4FF',
-    Network: '#22D3A8',
+    Network: '#F0E442',
     Unclassified: '#C7CDD6',
   };
   readonly linkColors = {
@@ -248,6 +494,12 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
    *  girato la fisica prima. */
   private collisionPolishDone = false;
 
+  /** Mappa id-nodo → community rilevata da `detectCommunities()`, calcolata
+   *  UNA sola volta al caricamento dei dati (non ad ogni tick) e usata come
+   *  chiave di raggruppamento dalla forza `cluster` (vedi setupGraph()).
+   *  Dipende solo dalla topologia degli archi, non da layer/working group. */
+  private nodeCommunity = new Map<string, string>();
+
   private selectedNodeRef: GraphNode | null = null;
   private pulseStartTime = 0;
 
@@ -264,6 +516,29 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
   readonly canGoBack = signal(false);
 
   private readonly radiusFor = (impact: number): number => 22.0 + Math.max(impact, 0) * 1.4;
+
+  /** Margine minimo, in unità di scena, che deve SEMPRE restare libero tra
+   *  le superfici di due nodi anche dopo la risoluzione delle collisioni —
+   *  non un semplice epsilon per evitare divisioni per zero, ma uno spazio
+   *  vuoto visibile apposta, così due nodi non risultano mai "a contatto". */
+  private readonly NODE_GAP = 8;
+
+  /** Raggio di collisione condiviso da forceCollide (durante la
+   *  simulazione) e resolveAllCollisions (passaggio finale deterministico):
+   *  un'unica definizione, non due formule duplicate che potrebbero
+   *  disallinearsi. Include già metà di NODE_GAP, così sommando i raggi
+   *  di due nodi qualsiasi si ottiene sempre almeno NODE_GAP di vuoto tra
+   *  le due superfici.
+   *  Moltiplicatore ridotto da 4.5 a 2.2: quel valore, molto più grande
+   *  della sfera realmente renderizzata (radiusFor puro, usato da
+   *  nodeVal), era la vera causa degli archi troppo lunghi — la
+   *  collisione impone una distanza minima tra i CENTRI di due nodi
+   *  collegati indipendentemente da quanto basso si imposti link.distance:
+   *  se la somma dei due raggi di collisione supera la distanza target
+   *  del link, è la collisione a vincere e l'arco resta comunque lungo. */
+  private collisionRadiusFor(n: GraphNode): number {
+    return this.radiusFor(n.impact_score) * 2.2 + this.NODE_GAP / 2;
+  }
 
   /** Dimensione visiva del nodo: invariata se nessun filtro è attivo;
    *  ingrandita per i match, rimpicciolita per i non-match. Il raggio di
@@ -285,6 +560,12 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       const fullData = this.graphData.graphData();
       if (!this.graph || fullData.nodes.length === 0 || this.graphDataInitialized) return;
+
+      // Community rilevate SOLO da nodi+archi (nessun layer/working group):
+      // sono la chiave di raggruppamento della forza 'cluster' qui sotto.
+      // Va calcolata prima di passare i dati al grafo, così la forza la
+      // trova già pronta al primo tick.
+      this.nodeCommunity = detectCommunities(fullData.nodes, fullData.links);
 
       // Se questa è una riapertura del grafo nella stessa sessione, il
       // layout è già assestato: niente nuova simulazione da attendere.
@@ -366,6 +647,7 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     // un'apertura precedente nella stessa sessione).
     const data = this.graphData.graphData();
     if (this.graph && data.nodes.length > 0 && !this.graphDataInitialized) {
+        this.nodeCommunity = detectCommunities(data.nodes, data.links);
         const usedCachedLayout = this.applySettledLayoutIfCached(data.nodes);
 
         this.graph.graphData(data);
@@ -489,12 +771,25 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
       .nodeThreeObject((n: GraphNode) => (n.impact_score >= this.alwaysLabelAbove ? this.buildLabelSprite(n) : null))
       .linkColor((l: GraphLink) => this.colorForLink(l))
       .linkWidth((l: GraphLink) => {
-        const base = l.type === 'Obsoletes' ? 14.0 : 7.0;
+        const base = l.type === 'Obsoletes' ? 20.0 : 11.0;
         if (this.isHighlightedLink(l)) return base * 2.0;
         if (!this.linkMatchesFilter(l)) return base * 0.3;
         return base;
       })
-      .linkOpacity(0.6)
+      .linkOpacity(0.9)
+      // Direzione visiva dell'arco: freccia nativa di 3d-force-graph
+      // (non un oggetto custom) posizionata all'estremità target, quindi
+      // punta sempre dal source (chi aggiorna/rende obsoleto) al target
+      // (chi viene aggiornato/reso obsoleto) — la stessa semantica già
+      // usata da `l.source`/`l.target` nel resto del componente.
+      .linkDirectionalArrowLength((l: GraphLink) => {
+        const base = l.type === 'Obsoletes' ? 18.0 : 11.0;
+        if (this.isHighlightedLink(l)) return base * 1.5;
+        if (!this.linkMatchesFilter(l)) return base * 0.3;
+        return base;
+      })
+      .linkDirectionalArrowRelPos(1)
+      .linkDirectionalArrowColor((l: GraphLink) => this.colorForLink(l))
       .linkDirectionalParticles((l: GraphLink) => (this.isHighlightedLink(l) ? 4 : 0))
       .linkDirectionalParticleWidth(1.6)
       .linkDirectionalParticleSpeed(0.006)
@@ -516,22 +811,34 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     // chiamiamo resumeAnimation() in fondo a questo metodo.
     this.graph.graphData({ nodes: [], links: [] });
 
-    // Repulsione base e attrazione dei link ridotta per un layout meno
-    // "collante", con più spinta a separarsi. Valori di partenza, poi
-    // sovrascritti dal chargeStrength (molto più alto) nell'effect 1 non
-    // appena i dati sono pronti.
+    // Repulsione base. Il chargeStrength (molto più alto) viene poi
+    // sovrascritto dall'effect 1 non appena i dati sono pronti.
     this.graph.d3Force('charge').strength(-7000).distanceMax(3000);
-    this.graph.d3Force('link').distance(650).strength(0.03);
 
-    // Performance: iterazioni di collisione limitate a 2. È la parte più
+    // Attrazione dei link rinforzata ulteriormente e distanza di riposo
+    // dimezzata (era 400/0.25): ora che collisionRadiusFor non impone più
+    // un raggio enorme (vedi sopra), il link può davvero avvicinare i
+    // nodi collegati invece di restare vincolato dalla collisione.
+    this.graph.d3Force('link').distance(180).strength(0.5);
+
+    // Forza di clustering: raggruppa spazialmente i nodi in base alle
+    // community rilevate SOLO da nodi+archi (vedi detectCommunities/
+    // nodeCommunity), non da attributi come layer o working group. Oltre
+    // a tirare i nodi verso il centroide del proprio gruppo, impone
+    // anche un margine minimo (550 unità, alzato da 300 per una
+    // separazione più marcata) tra i centroidi di community diverse.
+    this.graph.d3Force('cluster', forceCluster(n => this.nodeCommunity.get(n.id) ?? n.id, 0.8, 550));
+
+    // Performance: iterazioni di collisione alzate da 2 a 3. È la parte più
     // pesante di ogni tick con ~9.800 nodi (verifica reciproca dei raggi);
-    // con 2 iterazioni gli overlap residui sono trascurabili a schermo ma
-    // il costo per tick si dimezza.
+    // con la forza di clustering che ora comprime di più i nodi verso il
+    // centroide del proprio gruppo, 2 iterazioni lasciavano più overlap
+    // residuo da smaltire nel passaggio finale — 3 è il compromesso.
     this.graph.d3Force(
       'collide',
-      forceCollide<GraphNode>(n => this.radiusFor(n.impact_score) * 4.5)
+      forceCollide<GraphNode>(n => this.collisionRadiusFor(n))
         .strength(1)
-        .iterations(2),
+        .iterations(3),
     );
 
     // alphaDecay e velocityDecay più alti dei default compensano la
@@ -862,9 +1169,10 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     );
     if (nodes.length === 0) return;
 
-    // Stesso moltiplicatore di raggio usato dalla forceCollide in
-    // setupGraph, per coerenza con la "zona personale" già impostata lì.
-    const collisionRadius = (n: PositionedNode) => this.radiusFor(n.impact_score) * 4.5;
+    // Stesso raggio di collisione condiviso usato dalla forceCollide live
+    // in setupGraph (vedi collisionRadiusFor), per coerenza garantita: una
+    // sola formula, non due copie che potrebbero disallinearsi.
+    const collisionRadius = (n: PositionedNode) => this.collisionRadiusFor(n);
     const maxRadius = nodes.reduce((max, n) => Math.max(max, collisionRadius(n)), 0);
     // Celle grandi quanto il doppio del raggio massimo: basta controllare
     // le 26 celle adiacenti per essere certi di non perdere nessuna coppia
@@ -873,7 +1181,11 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     const cellKey = (x: number, y: number, z: number) =>
       `${Math.floor(x / cellSize)}|${Math.floor(y / cellSize)}|${Math.floor(z / cellSize)}`;
 
-    const MAX_PASSES = 40;
+    // Tetto di passate alzato da 40 a 80: la forza di clustering ora
+    // comprime più nodi in regioni più piccole (separazione tra cluster
+    // più netta = maggiore densità dentro ogni cluster), quindi possono
+    // servire più passate per smaltire le catene di overlap residue.
+    const MAX_PASSES = 80;
     for (let pass = 0; pass < MAX_PASSES; pass++) {
       const grid = new Map<string, PositionedNode[]>();
       for (const n of nodes) {

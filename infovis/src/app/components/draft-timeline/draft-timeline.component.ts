@@ -152,6 +152,16 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
   /** Indice di tutti i draft costruito una sola volta al caricamento,
    *  usato dalla ricerca. Non è un signal: a cambiare è solo la query. */
   private searchIndex: DraftSearchEntry[] = [];
+  /** Id dei draft che soddisfano il filtro working group corrente, per
+   *  colonna (chiave = anno come stringa, o '__nd__' per la colonna
+   *  "n.d."), nello stesso ordine alfabetico della pila completa.
+   *  Ricalcolata solo quando il filtro cambia (toggleWorkingGroup/
+   *  clearWorkingGroupSelection), non ad ogni draw/zoom/pan: così la
+   *  pila filtrata si ricompatta (nessun "buco" dove prima stava un
+   *  draft escluso) senza rifare il filtro sui dati completi ad ogni
+   *  frame. `null` quando nessun filtro è attivo: in quel caso si usa
+   *  direttamente `this.data.idsForYear`, senza bisogno di una copia. */
+  private visibleIdsCache: Map<string, string[]> | null = null;
 
   async ngAfterViewInit(): Promise<void> {
     this.ctx = this.canvasRef.nativeElement.getContext('2d')!;
@@ -229,6 +239,51 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
     return this.years.length * YEAR_COLUMN_WIDTH + NO_YEAR_GAP;
   }
 
+  /** Chiave stabile per indicizzare `visibleIdsCache`/i bucket: l'anno
+   *  come stringa, o un valore sentinella per la colonna "n.d." (che ha
+   *  chiave `year === null`). */
+  private bucketKey(year: number | null): string {
+    return year != null ? String(year) : '__nd__';
+  }
+
+  /** Ricalcola `visibleIdsCache` a partire dal filtro working group
+   *  corrente. Va richiamata ESPLICITAMENTE ad ogni cambio di filtro
+   *  (non è un computed) perché la usano hitTest/drawColumn, chiamati
+   *  molte volte per frame durante zoom/pan: rifare il filtro sui dati
+   *  completi ogni volta sarebbe inutile lavoro ripetuto a parità di
+   *  filtro attivo. */
+  private rebuildVisibleIdsCache(): void {
+    const selectedWgs = this.selectedWorkingGroups();
+    if (selectedWgs.size === 0) {
+      this.visibleIdsCache = null;
+      return;
+    }
+
+    const cache = new Map<string, string[]>();
+    const buckets: (number | null)[] = [...this.years];
+    if (this.hasNoYear) buckets.push(null);
+
+    for (const year of buckets) {
+      const ids = this.data.idsForYear(year).filter(id => {
+        const node = this.data.getNode(id);
+        const wg = node?.working_group ?? NO_WORKING_GROUP;
+        return selectedWgs.has(wg);
+      });
+      cache.set(this.bucketKey(year), ids);
+    }
+    this.visibleIdsCache = cache;
+  }
+
+  /** Pila di id da disegnare/testare per una colonna: quella completa se
+   *  nessun filtro è attivo, altrimenti solo i draft che soddisfano il
+   *  filtro working group corrente — già ricompattata (nessuna posizione
+   *  "vuota" lasciata dai draft esclusi), perché l'indice nella pila è
+   *  qui la posizione nell'array FILTRATO, non in quello completo. */
+  private visibleIdsForYear(year: number | null): readonly string[] {
+    if (!this.visibleIdsCache) return this.data.idsForYear(year);
+    return this.visibleIdsCache.get(this.bucketKey(year)) ?? [];
+  }
+
   private toWorld(screenX: number, screenY: number): [number, number] {
     return this.zoomTransform.invert([screenX, screenY]) as [number, number];
   }
@@ -268,7 +323,7 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
   }
 
   private drawColumn(ctx: CanvasRenderingContext2D, year: number | null, xCenter: number, yTop: number, yBottom: number): void {
-    const ids = this.data.idsForYear(year);
+    const ids = this.visibleIdsForYear(year);
 
     ctx.fillStyle = '#1a1a1a';
     ctx.fillText(year != null ? String(year) : 'n.d.', xCenter, -6);
@@ -285,12 +340,8 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
       if (!node) continue;
       const itemY = -BASELINE_OFFSET - idx * step;
 
-      const selectedWgs = this.selectedWorkingGroups();
-      const wg = node.working_group ?? NO_WORKING_GROUP;
-      const isDimmed = selectedWgs.size > 0 && !selectedWgs.has(wg);
-
-      ctx.fillStyle = isDimmed ? 'rgba(200,200,200,0.25)' : node.is_aborted ? this.abortedColor : this.draftColor;
-      if (!isDimmed && this.selectedNode()?.id === id) ctx.fillStyle = '#111111';
+      ctx.fillStyle = node.is_aborted ? this.abortedColor : this.draftColor;
+      if (this.selectedNode()?.id === id) ctx.fillStyle = '#111111';
       ctx.fillRect(xCenter - ITEM_WIDTH / 2, itemY - ITEM_HEIGHT, ITEM_WIDTH, ITEM_HEIGHT);
     }
   }
@@ -340,7 +391,7 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
 
     if (bestDist > ITEM_WIDTH / 2) return null;
 
-    const ids = this.data.idsForYear(year);
+    const ids = this.visibleIdsForYear(year);
     if (ids.length === 0) return null;
 
     const step = ITEM_HEIGHT + ITEM_GAP;
@@ -495,11 +546,13 @@ export class DraftTimelineComponent implements AfterViewInit, OnDestroy {
     const next = new Set(this.selectedWorkingGroups());
     next.has(wg) ? next.delete(wg) : next.add(wg);
     this.selectedWorkingGroups.set(next);
+    this.rebuildVisibleIdsCache();
     this.draw();  
   }
 
   clearWorkingGroupSelection(): void {
     this.selectedWorkingGroups.set(new Set());
+    this.rebuildVisibleIdsCache();
     this.draw();
   }
 
