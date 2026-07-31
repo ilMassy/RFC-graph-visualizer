@@ -136,7 +136,7 @@ Il repository non contiene i dati generati dalla pipeline (sono nel `.gitignore`
 
 1. Clonare il repository `git clone https://github.com/ilMassy/RFC-graph-visualizer.git`.
 2. (opzionale) Creare un virtualenv in `backend/venv`: se assente, lo script ripiega sul `python3` di sistema.
-3. Da `infovis/`, lanciare `npm install` e poi `npm run build` (o `npm start`).
+3. Da `infovis/`, lanciare `npm install` e poi `npm run build` (o `npx ng build`).
 4. Avviare un server HTTP locale all'interno della cartella di build (`dist/infovis/browser/`) per servire i file statici, ad esempio utilizzando il server integrato di PHP: `php -S 127.0.0.1:8888`; accedere al frontend facendo `Ctrl+click` sull'indirizzo (es. `http://127.0.0.1:8888`) e per interrompere l'esecuzione del server, premere `Ctrl+C`.
 
 ⚠️ Il primo run può richiedere tempo per il rate limiting di Datatracker; i run successivi sono incrementali e molto più veloci. Per i comandi su come avviare il frontend, di test dei singoli script backend, le variabili d'ambiente di override (`FRONTEND_DATA_DIR`, `VENV_PYTHON`) e l'alternativa del dataset già pronto, vedi [`docs/comandi_per_testare.md`](docs/comandi_per_testare.md).
