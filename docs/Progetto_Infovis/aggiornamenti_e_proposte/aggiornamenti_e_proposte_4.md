@@ -26,7 +26,6 @@ Il sistema è pensato per due profili di utente distinti, con esigenze diverse a
 6. [`GraphDataService` — vista "Grafo degli RFC"](#6-graphdataservice--vista-grafo-degli-rfc)
 7. [`DraftTimelineDataService` — vista "Draft e abortiti"](#7-drafttimelinedataservice--vista-draft-e-abortiti)
 8. [`GraphCanvasComponent` — il grafo 3D, la UX nel dettaglio](#8-graphcanvascomponent--il-grafo-3d-la-ux-nel-dettaglio)
-   - 8.3.1 [Forza di clustering: raggruppamento visivo per community](#831-forza-di-clustering-raggruppamento-visivo-per-community)
 9. [`DraftTimelineComponent` — l'istogramma temporale, la UX nel dettaglio](#9-drafttimelinecomponent--listogramma-temporale-la-ux-nel-dettaglio)
 10. [`LandingMenuComponent` — il punto di ingresso](#10-landingmenucomponent--il-punto-di-ingresso)
 11. [Cosa è cambiato rispetto ai documenti precedenti](#11-cosa-è-cambiato-rispetto-ai-documenti-precedenti)
