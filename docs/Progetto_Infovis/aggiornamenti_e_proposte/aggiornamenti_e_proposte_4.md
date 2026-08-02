@@ -71,7 +71,7 @@ Il resto dello script ricalca deliberatamente la stessa filosofia di `rfc_pipeli
 
 Pensato per essere lanciato **dopo** ogni `rfc_pipeline.py enrich`, oggi automatizzato tramite `update_dataset.sh` (punto 12).
 
-**Novità di questo documento**: il problema segnalato al punto 3 del documento precedente — il bug per cui un fallimento transitorio nella risoluzione di `year` veniva scambiato per un esito definitivo, "bloccando" per sempre un draft nel bucket "n.d." — è stato **corretto** nel codice dello script. Il dettaglio della correzione, e la riparazione dello stato già scritto dalle esecuzioni precedenti alla correzione, sono al punto 3.
+Il problema segnalato al punto 3 della versione 2 — il bug per cui un fallimento transitorio nella risoluzione di `year` veniva scambiato per un esito definitivo, "bloccando" per sempre un draft nel bucket "n.d." — è stato **corretto** nel codice dello script. Il dettaglio della correzione, e la riparazione dello stato già scritto dalle esecuzioni precedenti alla correzione, sono al punto 3.
 
 ### 1.3 Casi rari e situazioni non (ancora) trattate
 
