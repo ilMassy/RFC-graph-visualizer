@@ -437,7 +437,7 @@ Riepilogo puntuale delle differenze tra quanto proposto/segnalato nei documenti 
 
 ## 12. Automazione: come è stata affrontata
 
-Il documento precedente metteva a confronto tre strade per l'esecuzione dei due script backend (automatica su timer/scheduler, manuale su richiesta, o una via di mezzo con staging + promozione manuale), senza sciogliere la scelta. È stata presa una quarta strada, non elencata esplicitamente tra quelle tre: **agganciare l'esecuzione al ciclo di vita di `npm`**, invece che a un timer indipendente.
+La versione 2 metteva a confronto tre strade per l'esecuzione dei due script backend (automatica su timer/scheduler, manuale su richiesta, o una via di mezzo con staging + promozione manuale), senza sciogliere la scelta. È stata presa una quarta strada, non elencata esplicitamente tra quelle tre: **agganciare l'esecuzione al ciclo di vita di `npm`**, invece che a un timer indipendente.
 
 Concretamente, `backend/update_dataset.sh` esegue in sequenza `rfc_pipeline.py all`, `draft_metadata_enricher.py` e `purge_phantom_draft_nodes.py` (punto 1.1), scrivendo direttamente in `infovis/public/data/graph_data_enriched.json` (nessuna cartella intermedia, nessuna copia manuale). Gli hook `prestart` e `prebuild` di `infovis/package.json` lo richiamano automaticamente prima, rispettivamente, di `ng serve` e `ng build`: chi lancia `npm start` o `npm run build` ottiene sempre il dataset rigenerato, senza doversene ricordare.
 
