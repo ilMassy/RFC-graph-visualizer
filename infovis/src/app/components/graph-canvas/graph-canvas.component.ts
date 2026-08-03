@@ -632,10 +632,19 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
 
     // Rete di sicurezza: se onEngineStop non dovesse mai scattare (versioni
     // diverse della libreria, dataset patologico, ecc.) non si vuole restare
-    // bloccati con la schermata di caricamento a vita. Include margine per
-    // il passaggio di pulizia collisioni (resolveAllCollisions), che gira
-    // subito dopo l'onEngineStop normale prima di rivelare il grafo.
-    setTimeout(() => this.markGraphReady(), 10000);
+    // bloccati con la schermata di caricamento a vita.
+    // IMPORTANTE: su macchine più lente (CPU throttled, niente batteria) la
+    // simulazione fisica può legittimamente non aver ancora raggiunto
+    // cooldownTime/cooldownTicks a 10s — questo timer scattava PRIMA del
+    // vero onEngineStop e rivelava il grafo chiamando solo markGraphReady(),
+    // saltando resolveAllCollisions() (nodi non ancora separati → si
+    // "uniscono" visivamente) e captureSettledLayout() (nessuna posizione
+    // salvata → riparte da zero al prossimo ingresso). Deve quindi
+    // richiamare la stessa pulizia di handleEngineStop(), non un
+    // markGraphReady() "nudo". this.collisionPolishDone/this.readyEmitted
+    // garantiscono che se poi arriva anche il vero onEngineStop non si
+    // rifà lavoro doppio.
+    setTimeout(() => this.handleEngineStop(), 10000);
 
     // Se i dati sono già nel servizio ritorna subito, altrimenti attende
     // il completamento del fetch.
@@ -1107,23 +1116,26 @@ export class GraphCanvasComponent implements AfterViewInit, OnDestroy {
     const cached = GraphCanvasComponent.settledPositions;
     if (!cached) return false;
 
+    // Verifica il match completo PRIMA di toccare i nodi: se anche uno solo
+    // manca in cache, scarta senza aver già pinnato metà del grafo alle
+    // vecchie posizioni (altrimenti i nodi pinnati restano immobili mentre
+    // quelli nuovi partono da zero, causando sovrapposizioni).
+    for (const n of nodes) {
+      if (!cached.has(n.id)) {
+        GraphCanvasComponent.settledPositions = null;
+        return false;
+      }
+    }
+
     type PinnedNode = GraphNode & { x?: number; y?: number; z?: number; fx?: number; fy?: number; fz?: number };
-    let matched = 0;
     for (const n of nodes as PinnedNode[]) {
-      const pos = cached.get(n.id);
-      if (!pos) continue;
-      matched++;
+      const pos = cached.get(n.id)!;
       n.x = pos.x;
       n.y = pos.y;
       n.z = pos.z;
       n.fx = pos.x;
       n.fy = pos.y;
       n.fz = pos.z;
-    }
-
-    if (matched !== nodes.length) {
-      GraphCanvasComponent.settledPositions = null;
-      return false;
     }
     return true;
   }
