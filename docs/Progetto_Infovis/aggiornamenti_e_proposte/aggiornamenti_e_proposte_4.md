@@ -31,6 +31,7 @@ Il sistema è pensato per due profili di utente distinti, con esigenze diverse a
 11. [Cosa è cambiato rispetto ai documenti precedenti](#11-cosa-è-cambiato-rispetto-ai-documenti-precedenti)
 12. [Automazione: come è stata affrontata](#12-automazione-come-è-stata-affrontata)
 13. [Bug risolto: `parse` e i file locali custom](#13-bug-risolto-parse-e-i-file-locali-custom)
+14. [Problemi noti (aperti)](#14-problemi-noti-aperti)
 
 ---
 
@@ -460,3 +461,40 @@ Il compromesso accettato, esplicito: il dataset si aggiorna solo quando qualcuno
 Il bug: `download_if_changed()` trattava l'`input` di `parse` anche come destinazione del download da `--source-url`, quindi passare `sample_rfc_index.xml` come `input` poteva farlo sovrascrivere con l'indice reale scaricato da rfc-editor.org.
 
 Risolto con un nuovo flag `--offline`/`--no-download`: salta del tutto `download_if_changed()`, quindi si può passare `sample_rfc_index.xml` (o un altro XML locale) come `input` senza rischio di sovrascrittura da parte del download remoto.
+
+---
+
+## 14. Problemi noti (aperti)
+
+A differenza dei punti precedenti, questi non sono bug di correttezza già risolti, ma **limiti strutturali** individuati nella versione attuale del sistema: non richiedono una correzione puntuale nel codice, ma vanno tenuti presenti e monitorati. Sono lasciati aperti deliberatamente, in attesa di decidere se e come intervenire.
+
+Rientrano in questa categoria anche i tre casi già descritti al punto 1.3 — non li ripetiamo qui per esteso per non duplicare il contenuto, restano descritti lì perché legati da vicino alla spiegazione della pipeline in cui compaiono, ma sono a tutti gli effetti problemi noti alla stessa stregua dei punti seguenti:
+
+- persistenza dei metadati sugli RFC pubblicati, mai più riconsiderati una volta arricchiti, anche a fronte di correzioni successive su Datatracker o nei `MANUAL_LAYER_OVERRIDES`;
+- gestione silenziosa di un XML `--offline` con namespace non conforme (dataset vuoto senza eccezione esplicita);
+- euristica di `compute_impact_scores()`, che rompe l'invarianza di somma costante tipica di un PageRank puro.
+
+### 14.1 Differenza nel numero di nuovi draft tra repository già popolata e repository appena clonata
+
+**Il sintomo osservato:** partendo dallo stesso dataset, lanciare la pipeline sulla repository di sviluppo (dove tutto — dataset e stato — è già presente da esecuzioni precedenti) e lanciarla su una repository appena clonata (quindi lì è la prima esecuzione) produce due conteggi diversi di nodi draft comparsi: sulla repository clonata ne compaiono di più.
+
+Non è ancora chiaro se la causa sia riconducibile al costo/incompletezza di `recheck_active_drafts()` sui grandi numeri in gioco (punto 4.1), a una differenza di stato locale non versionato tra le due repository (es. `.state/`, cache HTTP), o ad altro. Non essendo il problema ancora diagnosticato con certezza, non riportiamo qui un'ipotesi di causa come se fosse verificata: resta segnalato come **punto da investigare** negli sviluppi futuri, prima di decidere se e come intervenire.
+
+### 14.2 Nodi nel bucket "n.d." dell'istogramma draft
+
+Anche con la correzione già descritta al punto 3 (distinzione tra esito definitivo e transitorio in `draft_metadata_enricher.py`), continuano a comparire nodi nel bucket "n.d." dell'istogramma draft. Come per il punto precedente, il problema non è ancora diagnosticato a fondo: viene segnalato qui come punto aperto da approfondire negli sviluppi futuri, non come causa già individuata.
+
+### 14.3 "Hairball" nel grafo 3D sugli hub ad alto grado
+
+**Il sintomo:** in prossimità dei nodi con più connessioni (i pilastri storici come IP, TCP, HTTP — che hanno anche `impact_score` più alto e quindi raggio visivo maggiore, punto 8.1), il grafo 3D produce zone molto affollate, con decine di archi lunghi che si accavallano e attraversano l'intera scena.
+
+![Hairball attorno a un hub ad alto grado nel grafo 3D](../img/grafo-hairball-hub.png)
+
+*Caso peggiore osservato: più hub ad alto grado ravvicinati nello spazio, con gli archi Updates/Obsoletes (azzurri/arancioni) che si sovrappongono fittamente tra loro.*
+
+**La causa:** è un limite strutturale, non specifico a questa implementazione. In un force-directed layout, un nodo con grado molto alto ha per definizione molti archi che convergono su di esso da punti diversi del grafo: più aumenta il grado, più è statisticamente inevitabile che alcuni di quegli archi percorrano lunghe distanze nello spazio 3D, incrociandone altri lungo il tragitto. Le mitigazioni già presenti (forza di clustering per topologia e raggio di collisione tarato a 2.2×, punto 8.3) riducono la densità visiva media del grafo, ma non possono eliminare il fenomeno attorno a un hub molto connesso: agiscono sulla distanza *tra i nodi*, non sul numero di archi che convergono su uno di essi.
+
+**Possibili direzioni future** (non decise, solo annotate):
+- edge bundling per raggruppare visivamente archi con percorso simile, riducendo il "rumore" di linee parallele che si accavallano senza aggregazione;
+- opacità o spessore dell'arco proporzionale alla distanza percorsa, per attenuare visivamente gli archi più lunghi rispetto a quelli locali;
+- un filtro on-demand che, alla selezione di un hub, nasconda temporaneamente gli archi verso nodi non immediatamente rilevanti, per esplorarne i vicini in gruppi più piccoli invece che tutti insieme (si affiancherebbe al focus visivo già esistente al click, punto 8.5, senza sostituirlo).
