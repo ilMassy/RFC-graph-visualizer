@@ -19,6 +19,7 @@ Per ogni campo del nodo, vale questa regola senza eccezioni:
     fallback euristico spacciato per dato buono.
 """
 
+import hashlib
 import argparse
 import json
 import logging
@@ -435,8 +436,9 @@ _NOT_FOUND_MARKER = "__not_found__"
 
 
 def _cache_path_for(url: str) -> Path:
-    safe_name = re.sub(r"[^a-zA-Z0-9]+", "_", url)[:150]
-    return CACHE_DIR / f"{safe_name}.json"
+    safe_name = re.sub(r"[^a-zA-Z0-9]+", "_", url)[:80]
+    digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:16]
+    return CACHE_DIR / f"{safe_name}_{digest}.json"
 
 
 def datatracker_get(path: str, bypass_cache: bool = False) -> tuple:
