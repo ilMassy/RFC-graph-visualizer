@@ -478,7 +478,7 @@ Rientrano in questa categoria anche i tre casi già descritti al punto 1.3 — n
 
 **Il sintomo osservato:** partendo dallo stesso dataset, lanciare la pipeline sulla repository di sviluppo (dove tutto — dataset e stato — è già presente da esecuzioni precedenti) e lanciarla su una repository appena clonata (quindi lì è la prima esecuzione) produce due conteggi diversi di nodi draft comparsi: sulla repository clonata ne compaiono di più.
 
-Non è ancora chiaro se la causa sia riconducibile al costo/incompletezza di `recheck_active_drafts()` sui grandi numeri in gioco (punto 4.1), a una differenza di stato locale non versionato tra le due repository (es. `.state/`, cache HTTP), o ad altro. Non essendo il problema ancora diagnosticato con certezza, non riportiamo qui un'ipotesi di causa come se fosse verificata: resta segnalato come **punto da investigare** negli sviluppi futuri, prima di decidere se e come intervenire.
+Non è ancora chiaro se la causa sia riconducibile al costo/incompletezza di `recheck_active_drafts()` sui grandi numeri in gioco (punto 4.1), a una differenza di stato locale non versionato tra le due repository (es. `.state/`, cache HTTP), o ad altro. Non essendo il problema ancora diagnosticato con certezza, non si riporta qui un'ipotesi di causa come se fosse verificata: resta segnalato come **punto da investigare** negli sviluppi futuri, prima di decidere se e come intervenire.
 
 ### 14.2 Nodi nel bucket "n.d." dell'istogramma draft
 
