@@ -486,7 +486,7 @@ Anche con la correzione già descritta al punto 3 (distinzione tra esito definit
 
 ### 14.3 "Hairball" nel grafo 3D sugli hub ad alto grado
 
-**Il sintomo:** in prossimità dei nodi con più connessioni (i pilastri storici come IP, TCP, HTTP — che hanno anche `impact_score` più alto e quindi raggio visivo maggiore, punto 8.1), il grafo 3D produce zone molto affollate, con decine di archi lunghi che si accavallano e attraversano l'intera scena.
+**Il sintomo:** in prossimità dei nodi con più connessioni (i pilastri storici come DNS — che hanno anche `impact_score` più alto e quindi raggio visivo maggiore, punto 8.1), il grafo 3D produce zone molto affollate, con decine di archi lunghi che si accavallano e attraversano l'intera scena.
 
 ![Hairball attorno a un hub ad alto grado nel grafo 3D](../img/grafo-hairball-hub.png)
 
