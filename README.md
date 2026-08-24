@@ -2,7 +2,7 @@
  
 # 🕸️ RFC Graph Visualizer
  
-**Esplora visivamente 40 anni di storia degli standard Internet dell'IETF**
+**Esplora visivamente più di 40 anni di storia degli standard Internet dell'IETF**
  
 ![Angular](https://img.shields.io/badge/Angular-standalone-DD0031?logo=angular&logoColor=white)
 ![D3.js](https://img.shields.io/badge/D3.js-force--directed-F9A03C?logo=d3dotjs&logoColor=white)
