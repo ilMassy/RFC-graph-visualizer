@@ -18,21 +18,6 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
  
 ---
  
-## 📑 Indice
- 
-- [A chi è rivolto](#-a-chi-è-rivolto)
-- [Anteprima](#-anteprima)
-- [Come iniziare](#-come-iniziare)
-  - [Opzione consigliata — dataset già pronto](#-opzione-consigliata--dataset-già-pronto-pochi-minuti)
-  - [Opzione completa — pipeline dati da zero](#-opzione-completa--pipeline-dati-da-zero-anche-diverse-ore)
-- [Architettura](#-architettura)
-- [Struttura del repository](#-struttura-del-repository)
-- [Componenti principali del backend](#-componenti-principali-del-backend)
-- [Relazione di progetto](#-relazione-di-progetto)
-- [Riferimenti](#-riferimenti)
-- [Autore](#-autore)
----
- 
 ## 🎯 A chi è rivolto
  
 Il sistema è pensato per due profili distinti, a cui rispondono le due viste del frontend:
