@@ -10,6 +10,7 @@
 ![License](https://img.shields.io/badge/dati-IETF%20Datatracker%20%2B%20RFC--Editor-lightgrey)
  
 </div>
+
 Piattaforma per esplorare visivamente le relazioni storiche tra i documenti **RFC** dell'IETF (Internet Engineering Task Force) — in particolare i legami *Updates* e *Obsoletes* — tramite un **grafo 3D interattivo**, affiancato da una **timeline** dedicata ai documenti ancora in fase di bozza (Internet-Draft).
  
 Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'Università Roma Tre.
