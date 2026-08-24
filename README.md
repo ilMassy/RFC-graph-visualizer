@@ -78,7 +78,7 @@ npx ng build
 ```
  
 > [!TIP]
-> Il comando chiave è **`npx ng build`** (o `npx ng serve` per lo sviluppo con reload automatico), **non** `npm run build` / `npm start`. La differenza non è stilistica: `npx ng ...` chiama direttamente Angular CLI **senza** passare dagli hook `prestart`/`prebuild` di npm, che altrimenti rilanciano comunque l'intera pipeline dati Python sopra il dataset appena scaricato (vedi il riquadro rosso sotto). Con `npx` il dataset scaricato viene usato così com'è, e la build richiede solo pochi minuti.
+> Il comando chiave è **`npx ng build`** (o `npx ng serve` per lo sviluppo con reload automatico), **non** `npm run build` / `npm start`. La differenza non è stilistica: `npx ng ...` chiama direttamente Angular CLI **senza** passare dagli hook `prestart`/`prebuild` di npm, che altrimenti rilanciano comunque l'intera pipeline dati Python sopra il dataset appena scaricato per aggiornarlo con i dati più recenti dell'indice IETF, includendo gli ultimi RFC pubblicati e gli Internet-Draft aggiornati. Con `npx` il dataset scaricato viene usato così com'è, e la build richiede solo pochi istanti.
  
 Avvia poi un server HTTP locale nella cartella di build (`dist/infovis/browser/`), ad esempio con il server integrato di PHP:
  
