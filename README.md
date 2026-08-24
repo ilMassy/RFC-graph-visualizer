@@ -155,8 +155,8 @@ RFC-graph-visualizer/
 │
 ├── docs/
 │   ├── Progetto_Infovis/
-│   │   ├── Relazione_Progetto_RFC-Graph-Visualizer.md   # Relazione di progetto completa (problema, dati, design, risultati, sviluppi futuri)
-│   │   └── img/                                          # Screenshot referenziati dalla relazione e da questo README
+│   │   ├── img/                                         # Screenshot referenziati dalla relazione e da questo README
+│   │   └── Relazione_Progetto_RFC-Graph-Visualizer.md   # Relazione di progetto completa (problema, dati, design, risultati, sviluppi futuri)
 │   └── comandi_per_testare.md        # Comandi per clonare il repo, testare i singoli script backend, avviare il frontend
 │
 ├── infovis/                          # Frontend Angular standalone
