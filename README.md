@@ -9,7 +9,7 @@
 ![Python](https://img.shields.io/badge/Python-3-3776AB?logo=python&logoColor=white)
 ![Status](https://img.shields.io/badge/stato-in%20sviluppo-yellow)
 ![License](https://img.shields.io/badge/dati-IETF%20Datatracker%20%2B%20RFC--Editor-lightgrey)
-![OS](https://img.shields.io/badge/OS-Unix--like-333333?logo=linux&logoColor=white)
+![OS](https://img.shields.io/badge/OS-Unix--like-FCC624?logo=linux&logoColor=black)
  
 </div>
 
