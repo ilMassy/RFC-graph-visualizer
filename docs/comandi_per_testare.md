@@ -1,6 +1,20 @@
-# Comandi per testare la pipeline di backend
+# 🧪 Comandi per testare la pipeline di backend
 
-## Indice
+Riferimento rapido per testare `backend/rfc_pipeline.py` e `backend/draft_metadata_enricher.py` singolarmente, senza dover ricordare a memoria le opzioni.
+
+> [!NOTE]
+> Nell'uso normale **non serve lanciare nulla di questo a mano**: gli hook `prestart`/`prebuild` di `infovis/package.json` chiamano già `backend/update_dataset.sh` (§6) che esegue tutta la pipeline e scrive direttamente in `infovis/public/data/graph_data_enriched.json`. I comandi qui sotto scrivono invece in una cartella `output/` locale a `backend/`, comoda per test isolati senza toccare il dataset reale del frontend.
+
+Da eseguire dentro `backend/`, con il virtualenv attivo:
+
+```bash
+cd percorso_cartella_backend
+source venv/bin/activate
+```
+
+---
+
+## 📑 Indice
 
 1. [Fase `parse` — indice reale completo](#1-fase-parse--indice-reale-completo)
 2. [Fase `enrich` — arricchimento via Datatracker](#2-fase-enrich--arricchimento-via-datatracker)
@@ -13,34 +27,21 @@
 
 ---
 
-Riferimento rapido per testare `backend/rfc_pipeline.py` e `backend/draft_metadata_enricher.py` singolarmente, senza dover ricordare a memoria le opzioni. Nell'uso normale non serve lanciare nulla di questo a mano: gli hook `prestart`/`prebuild` di `infovis/package.json` chiamano già `backend/update_dataset.sh` (sezione 6) che esegue tutta la pipeline e scrive direttamente in `infovis/public/data/graph_data_enriched.json`. I comandi qui sotto scrivono invece in una cartella `output/` locale a `backend/`, comoda per test isolati senza toccare il dataset reale del frontend. Da eseguire dentro `backend/`, con il virtualenv attivo:
-
-```bash
-cd percorso_cartella_backend
-source venv/bin/activate
-```
-
----
-
 ## 1. Fase `parse` — indice reale completo
 
-Per testare con `sample_rfc_index.xml` invece che con l'indice reale, usare `--offline`: salta del tutto `download_if_changed()`, quindi nessuna richiesta di rete e nessun rischio di sovrascrittura del file di esempio:
+Per testare con `sample_rfc_index.xml` invece che con l'indice reale, usa `--offline`: salta del tutto `download_if_changed()`, quindi nessuna richiesta di rete e nessun rischio di sovrascrivere il file di esempio:
 
 ```bash
 python rfc_pipeline.py parse sample_rfc_index.xml -o output/graph_data.json --offline
 ```
 
----
-
-Scarica (se necessario) `rfc-index.xml` e produce `graph_data.json`:
+Con l'indice reale, il comando scarica (se necessario) `rfc-index.xml` e produce `graph_data.json`. Rilancialo una seconda volta, invariato, per verificare che il **download condizionale** funzioni: la seconda volta deve loggare *"non modificato dal server, nessun download"* invece di riscaricare tutto:
 
 ```bash
+# 1ª esecuzione: scarica l'indice e genera graph_data.json
 python rfc_pipeline.py parse rfc-index.xml -o output/graph_data.json
-```
 
-Verifica che il download condizionale funzioni — rilancia lo stesso comando una seconda volta: deve loggare "non modificato dal server, nessun download" invece di riscaricare tutto:
-
-```bash
+# 2ª esecuzione, identica: verifica il download condizionale (ETag/Last-Modified)
 python rfc_pipeline.py parse rfc-index.xml -o output/graph_data.json
 ```
 
@@ -50,21 +51,18 @@ Forza un nuovo parsing completo ignorando lo stato salvato (utile dopo aver modi
 python rfc_pipeline.py parse rfc-index.xml -o output/graph_data.json --force
 ```
 
+---
+
 ## 2. Fase `enrich` — arricchimento via Datatracker
 
-⚠️ Interroga l'API pubblica di Datatracker: con il dataset reale (~10.000 RFC) ci vuole tempo per via del rate limiting (0.5s per richiesta). Per un primo test, usa `--skip-drafts` per saltare il fetch dei 34.000+ Internet-Draft e limitarti solo agli RFC pubblicati:
+> [!WARNING]
+> Interroga l'API pubblica di Datatracker: con il dataset reale (~10.000 RFC) ci vuole tempo per via del rate limiting (0.5s per richiesta). Per un primo test, usa `--skip-drafts` per saltare il fetch dei 34.000+ Internet-Draft e limitarti solo agli RFC pubblicati.
 
 ```bash
 python rfc_pipeline.py enrich --input output/graph_data.json --output output/graph_data_enriched.json --skip-drafts
 ```
 
-Test dell'interruzione/ripresa — lancia il comando e interrompi con `Ctrl+C` dopo qualche secondo, poi rilancia lo stesso comando: deve riprendere da dove si era fermato invece di ripartire da zero (verificalo controllando che il log iniziale riporti "già processati: N" con N > 0):
-
-```bash
-python rfc_pipeline.py enrich --input output/graph_data.json --output output/graph_data_enriched.json
-```
-
-Test con anche i draft (run completo, quello che produce il dataset finale):
+Run completo (produce anche i draft — è quello che genera il dataset finale). Usalo anche per testare l'**interruzione/ripresa**: lancialo, interrompi con `Ctrl+C` dopo qualche secondo, poi rilancia lo stesso comando: deve riprendere da dove si era fermato invece di ripartire da zero — verificalo controllando che il log iniziale riporti *"già processati: N"* con N > 0:
 
 ```bash
 python rfc_pipeline.py enrich --input output/graph_data.json --output output/graph_data_enriched.json
@@ -82,13 +80,17 @@ Riparti da zero ignorando `enriched_ids` (ri-arricchisce tutto, anche ciò che e
 python rfc_pipeline.py enrich --input output/graph_data.json --output output/graph_data_enriched.json --force
 ```
 
+---
+
 ## 3. Comando `all` — pipeline completa in un solo passaggio
 
-È lo stesso sotto-comando lanciato da `update_dataset.sh` (sezione 6), lì con `--enriched-output` puntato direttamente a `infovis/public/data/graph_data_enriched.json` invece che a `output/`:
+È lo stesso sotto-comando lanciato da `update_dataset.sh` (§6), lì con `--enriched-output` puntato direttamente a `infovis/public/data/graph_data_enriched.json` invece che a `output/`:
 
 ```bash
 python rfc_pipeline.py all rfc-index.xml --enriched-output output/graph_data_enriched.json
 ```
+
+---
 
 ## 4. Verifiche sull'output finale
 
@@ -140,9 +142,10 @@ print('Archi pendenti trovati:', len(pendenti))
 
 ## 5. Fase `draft_metadata_enricher.py` — secondo passaggio, solo draft/aborted
 
-⚠️ Va lanciato **dopo** un `enrich` (punto 2) che abbia già prodotto `graph_data_enriched.json` con i draft dentro (cioè senza `--skip-drafts`): questo script non crea nodi, arricchisce solo quelli già presenti che risultano incompleti (`url` mancante o `year` nullo).
+> [!WARNING]
+> Va lanciato **dopo** un `enrich` (§2) che abbia già prodotto `graph_data_enriched.json` con i draft dentro (cioè senza `--skip-drafts`): questo script non crea nodi, arricchisce solo quelli già presenti che risultano incompleti (`url` mancante o `year` nullo).
 
-Run di base, in place sullo stesso file (input e output coincidono):
+Run di base, in place sullo stesso file (input e output coincidono). Usalo anche per testare l'**interruzione/ripresa**: lancialo, interrompi con `Ctrl+C` dopo qualche secondo, poi rilancialo: deve riprendere da dove si era fermato invece di ripartire da zero — verificalo controllando che il log iniziale riporti *"già processati: N"* con N > 0:
 
 ```bash
 python draft_metadata_enricher.py --input output/graph_data_enriched.json --output output/graph_data_enriched.json
@@ -168,12 +171,6 @@ print('Con url risolto:', con_url)
 print('Con year risolto:', con_year)
 print(json.dumps(draft_nodes[0], indent=2))
 "
-```
-
-Test dell'interruzione/ripresa — lancia il comando e interrompi con `Ctrl+C` dopo qualche secondo, poi rilancia lo stesso comando: deve riprendere da dove si era fermato (verificalo controllando che il log iniziale riporti "già processati: N" con N > 0, invece di ripartire da zero):
-
-```bash
-python draft_metadata_enricher.py --input output/graph_data_enriched.json --output output/graph_data_enriched.json
 ```
 
 Svuota la cache HTTP locale dello script (separata da quella di `rfc_pipeline.py`: directory `.cache/datatracker_docdetail`), utile se si sospetta una risposta 404 "fantasma" rimasta in cache da un errore temporaneo — qui non esiste un flag dedicato come `--clear-cache`, va cancellata a mano:
@@ -206,9 +203,9 @@ print('Draft/aborted senza year:', senza_year, '(atteso: >0 ma minoranza)')
 
 ## 6. `update_dataset.sh` — l'orchestratore automatico
 
-Lanciato in automatico dagli hook `prestart`/`prebuild` definiti in `infovis/package.json`, quindi da `npm start`/`npm run build` non serve invocarlo a mano. Esegue in sequenza `rfc_pipeline.py all` e `draft_metadata_enricher.py`, scrivendo direttamente in `infovis/public/data/graph_data_enriched.json` (nessuna cartella `output/` né copia manuale, a differenza dei comandi di test isolato delle sezioni 1-5).
+Lanciato in automatico dagli hook `prestart`/`prebuild` definiti in `infovis/package.json`, quindi da `npm start`/`npm run build` non serve invocarlo a mano. Esegue in sequenza `rfc_pipeline.py all` e `draft_metadata_enricher.py`, scrivendo direttamente in `infovis/public/data/graph_data_enriched.json` (nessuna cartella `output/` né copia manuale, a differenza dei comandi di test isolato delle sezioni 1–5).
 
-Percorsi di default (sovrascrivibili con variabili d'ambiente prima di `npm`):
+Percorsi di default, sovrascrivibili con variabili d'ambiente prima di `npm`:
 
 ```bash
 # cartella dati del frontend, di default ../infovis/public/data rispetto a backend/
@@ -225,9 +222,11 @@ cd backend
 bash update_dataset.sh
 ```
 
+---
+
 ## 7. Avvio del sistema — build del frontend Angular e serving statico
 
-Da dentro `infovis/` (la root del progetto Angular, non `backend/`), `npm run build` lancia da solo l'hook `prebuild` (sezione 6) e poi la build, dopo aver scaricato tutte le dipendenze necessarie:
+Da dentro `infovis/` (la root del progetto Angular, non `backend/`), `npm run build` lancia da solo l'hook `prebuild` (§6) e poi la build, dopo aver scaricato tutte le dipendenze necessarie:
 
 ```bash
 cd infovis
@@ -235,13 +234,15 @@ npm install
 npm run build
 ```
 
-Per rigenerare il frontend dopo una modifica al codice Angular o dopo un aggiornamento del dataset, basta ripetere `npm run build` e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta). Se invece si vuole solo ricompilare Angular senza rilanciare la pipeline dati (dataset già aggiornato), si può usare `npx ng build` per saltare l'hook `prebuild`:
+> [!TIP]
+> Se il dataset è già aggiornato e vuoi solo ricompilare Angular **senza** rilanciare l'intera pipeline dati, usa `npx ng build` per saltare l'hook `prebuild`:
+> ```bash
+> cd infovis
+> npm install
+> npx ng build
+> ```
 
-```bash
-cd infovis
-npm install
-npx ng build
-```
+Per rigenerare il frontend dopo una modifica al codice Angular o dopo un aggiornamento del dataset, basta ripetere una delle due build sopra e poi ri-servire la cartella `dist/infovis/browser` aggiornata (fermando prima il server precedente se ancora attivo sulla stessa porta).
 
 Servire i file statici generati (build in `dist/infovis/browser/`) con il server integrato di PHP, in ascolto solo su localhost:
 
@@ -252,7 +253,8 @@ php -S 127.0.0.1:8888
 
 A questo punto il frontend è raggiungibile su `http://127.0.0.1:8888`. Per fermare il server: `Ctrl+C`.
 
-**Nota**: questo è un server di sviluppo/test minimale (serve solo file statici, nessuna configurazione di caching/compressione/HTTPS) — va bene per verificare il risultato di una build locale, non è pensato per un deploy in produzione.
+> [!NOTE]
+> Questo è un server di sviluppo/test minimale (serve solo file statici, nessuna configurazione di caching/compressione/HTTPS) — va bene per verificare il risultato di una build locale, non è pensato per un deploy in produzione.
 
 ---
 
@@ -264,15 +266,15 @@ Rimuove stato e cache di `rfc_pipeline.py` per ripartire completamente da zero (
 rm -rf .state .cache
 ```
 
-Nota: `draft_metadata_enricher.py` usa un file di stato e una cache **separati** (`.state/draft_metadata_state.json` e `.cache/datatracker_docdetail/`), quindi il comando sopra li rimuove già entrambi se lanciato dalla stessa cartella `backend/` — se invece si vuole azzerare **solo** lo stato del secondo script, lasciando intatti quelli di `rfc_pipeline.py`:
+`draft_metadata_enricher.py` usa un file di stato e una cache **separati** (`.state/draft_metadata_state.json` e `.cache/datatracker_docdetail/`), quindi il comando sopra li rimuove già entrambi se lanciato dalla stessa cartella `backend/`. Se invece vuoi azzerare **solo** lo stato del secondo script, lasciando intatti quelli di `rfc_pipeline.py`:
 
 ```bash
 rm -f .state/draft_metadata_state.json
 rm -rf .cache/datatracker_docdetail
 ```
 
-Rimuove solo gli output di test generati al punto 1, senza toccare lo stato del dataset reale:
+Allo stesso modo, la cache HTTP della fase `enrich` di `rfc_pipeline.py` (§2) è **anch'essa separata** da quella di `draft_metadata_enricher.py`: vive in `.cache/datatracker`, non in `.cache/datatracker_docdetail`. Equivale a lanciare `enrich --clear-cache`, ma senza dover rifare anche il resto del run — comodo se vuoi solo forzare un refresh della cache prima del prossimo `enrich`. Da eseguire dalla root del repository (da qui il prefisso `backend/`):
 
 ```bash
-rm -f output/graph_data_test.json .state/parser_state_test.json
+rm -rf backend/.cache/datatracker
 ```
