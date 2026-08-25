@@ -336,8 +336,8 @@ Il progetto documenta infine, con la stessa onestà con cui presenta i risultati
 6. Fruchterman, T. M. J., & Reingold, E. M. (1991). [*Graph Drawing by Force-Directed Placement*](https://doi.org/10.1002/spe.4380211102). Software: Practice and Experience, 21(11), 1129–1164.
 7. Holten, D. (2006). [*Hierarchical Edge Bundles: Visualization of Adjacency Relations in Hierarchical Data*](https://doi.org/10.1109/TVCG.2006.147). IEEE Transactions on Visualization and Computer Graphics, 12(5), 741–748.
 8. Okabe, M., & Ito, K. (2008). [*Color Universal Design (CUD): How to Make Figures and Presentations that are Friendly to Colorblind People*](https://jfly.uni-koeln.de/color/). Jfly.org.
-9. Brin, S., & Page, L. (1998). [*The Anatomy of a Large-Scale Hypertextual Web Search Engine*](https://doi.org/10.1016/S0169-7552(98)00110-X). Computer Networks and ISDN Systems, 30(1–7), 107–117.
-10. Raghavan, U. N., Albert, R., & Kumara, S. (2007). [*Near Linear Time Algorithm to Detect Community Structures in Large-Scale Networks*](https://doi.org/10.1103/PhysRevE.76.036106). Physical Review E, 76(3), 036106.
+9. Brin, S., & Page, L. (1998). [*The Anatomy of a Large-Scale Hypertextual Web Search Engine*](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html). Computer Networks and ISDN Systems, 30(1–7), 107–117.
+10. Raghavan, U. N., Albert, R., & Kumara, S. (2007). [*Near Linear Time Algorithm to Detect Community Structures in Large-Scale Networks*](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.76.036106). Physical Review E, 76(3), 036106.
 11. D3.js — [d3js.org](https://d3js.org/), libreria usata per la force simulation e la gestione di zoom/pan.
 12. IETF Datatracker — [datatracker.ietf.org](https://datatracker.ietf.org/), fonte autorevole per layer di rete, working group e stato degli Internet-Draft.
 13. RFC Editor — [rfc-editor.org](https://www.rfc-editor.org/), fonte dell'indice ufficiale `rfc-index.xml`.
