@@ -328,19 +328,35 @@ Il progetto documenta infine, con la stessa onestà con cui presenta i risultati
 
 ## 13. Bibliografia
 
-1. Shneiderman, B. (1996). [*The Eyes Have It: A Task by Data Type Taxonomy for Information Visualizations*](https://doi.org/10.1109/VL.1996.545307). Proceedings of the IEEE Symposium on Visual Languages, 336–343.
-2. Munzner, T. (2014). [*Visualization Analysis and Design*](https://doi.org/10.1201/b17511). CRC Press, A K Peters Visualization Series.
-3. Ware, C. (2019). [*Information Visualization: Perception for Design*](https://www.sciencedirect.com/book/9780128128756/information-visualization) (4th ed.). Morgan Kaufmann.
-4. Purchase, H. C. (1997). [*Which Aesthetic Has the Greatest Effect on Human Understanding?*](https://doi.org/10.1007/3-540-63938-1_67). In: Graph Drawing (GD 1997), Lecture Notes in Computer Science, vol. 1353, Springer.
-5. Eades, P. (1984). [*A Heuristic for Graph Drawing*](https://scholar.google.com/scholar?q=Eades+1984+A+heuristic+for+graph+drawing+Congressus+Numerantium). Congressus Numerantium, 42, 149–160.
-6. Fruchterman, T. M. J., & Reingold, E. M. (1991). [*Graph Drawing by Force-Directed Placement*](https://doi.org/10.1002/spe.4380211102). Software: Practice and Experience, 21(11), 1129–1164.
-7. Holten, D. (2006). [*Hierarchical Edge Bundles: Visualization of Adjacency Relations in Hierarchical Data*](https://doi.org/10.1109/TVCG.2006.147). IEEE Transactions on Visualization and Computer Graphics, 12(5), 741–748.
-8. Okabe, M., & Ito, K. (2008). [*Color Universal Design (CUD): How to Make Figures and Presentations that are Friendly to Colorblind People*](https://jfly.uni-koeln.de/color/). Jfly.org.
-9. Brin, S., & Page, L. (1998). [*The Anatomy of a Large-Scale Hypertextual Web Search Engine*](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html). Computer Networks and ISDN Systems, 30(1–7), 107–117.
-10. Raghavan, U. N., Albert, R., & Kumara, S. (2007). [*Near Linear Time Algorithm to Detect Community Structures in Large-Scale Networks*](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.76.036106). Physical Review E, 76(3), 036106.
-11. D3.js — [d3js.org](https://d3js.org/), libreria usata per la force simulation e la gestione di zoom/pan.
-12. IETF Datatracker — [datatracker.ietf.org](https://datatracker.ietf.org/), fonte autorevole per layer di rete, working group e stato degli Internet-Draft.
-13. RFC Editor — [rfc-editor.org](https://www.rfc-editor.org/), fonte dell'indice ufficiale `rfc-index.xml`.
+- **Shneiderman, B. (1996)** — [The Eyes Have It: A Task by Data Type Taxonomy for Information Visualizations](https://doi.org/10.1109/VL.1996.545307), Proceedings of the IEEE Symposium on Visual Languages, 336–343.
+
+- **Munzner, T. (2014)** — [Visualization Analysis and Design](https://doi.org/10.1201/b17511), CRC Press, A K Peters Visualization Series.
+
+- **Ware, C. (2019)** — [Information Visualization: Perception for Design](https://www.sciencedirect.com/book/9780128128756/information-visualization) (4th ed.), Morgan Kaufmann.
+
+- **Purchase, H. C. (1997)** — [Which Aesthetic Has the Greatest Effect on Human Understanding?](https://doi.org/10.1007/3-540-63938-1_67), In: Graph Drawing (GD 1997), Lecture Notes in Computer Science, vol. 1353, Springer.
+
+- **Eades, P. (1984)** — [A Heuristic for Graph Drawing](https://scholar.google.com/scholar?q=Eades+1984+A+heuristic+for+graph+drawing+Congressus+Numerantium), Congressus Numerantium, 42, 149–160.
+
+- **Fruchterman, T. M. J., & Reingold, E. M. (1991)** — [Graph Drawing by Force-Directed Placement](https://doi.org/10.1002/spe.4380211102), Software: Practice and Experience, 21(11), 1129–1164.
+
+- **Holten, D. (2006)** — [Hierarchical Edge Bundles: Visualization of Adjacency Relations in Hierarchical Data](https://doi.org/10.1109/TVCG.2006.147), IEEE Transactions on Visualization and Computer Graphics, 12(5), 741–748.
+
+- **Okabe, M., & Ito, K. (2008)** — [Color Universal Design (CUD): How to Make Figures and Presentations that are Friendly to Colorblind People](https://jfly.uni-koeln.de/color/), Jfly.org.
+
+- **RFC Editor** — [rfc-editor.org](https://www.rfc-editor.org/), fonte dell'indice ufficiale `rfc-index.xml` usato in fase di parsing.
+
+- **IETF Datatracker** — [datatracker.ietf.org](https://datatracker.ietf.org/), fonte autorevole per layer di rete, working group, Internet-Draft e per la data di ultima revisione dei draft; API pubblica documentata su [datatracker.ietf.org/api/v1](https://datatracker.ietf.org/api/v1/).
+
+- **IETF** — [ietf.org](https://www.ietf.org/), organizzazione responsabile dello sviluppo degli standard Internet documentati come RFC.
+
+- **Brin, S., Page, L. (1998)** — [The Anatomy of a Large-Scale Hypertextual Web Search Engine (Archived)](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html), paper di riferimento per l'algoritmo PageRank originale, adattato come variante pesata per il calcolo dell'`impact_score` dei nodi RFC.
+
+- **Raghavan, U.N., Albert, R., Kumara, S. (2007)** — [Near linear time algorithm to detect community structures in large-scale networks](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.76.036106), Phys. Rev. E 76, 036106, paper di riferimento per il Label Propagation Algorithm (LPA) usato per il clustering spaziale dei nodi.
+
+- **D3.js** — [d3js.org](https://d3js.org/), libreria usata nel frontend per la force simulation 3D e la gestione di zoom/pan.
+
+- **Angular** — [angular.dev](https://angular.dev/), framework usato per il frontend.
 
 ---
 
