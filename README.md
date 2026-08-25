@@ -1,7 +1,8 @@
 <div align="center">
+ 
 # 🕸️ RFC Graph Visualizer
  
-**Esplora visivamente 40 anni di storia degli standard Internet dell'IETF**
+**Esplora visivamente più di 40 anni di storia degli standard Internet dell'IETF**
  
 ![Angular](https://img.shields.io/badge/Angular-standalone-DD0031?logo=angular&logoColor=white)
 ![D3.js](https://img.shields.io/badge/D3.js-force--directed-F9A03C?logo=d3dotjs&logoColor=white)
@@ -10,25 +11,11 @@
 ![License](https://img.shields.io/badge/dati-IETF%20Datatracker%20%2B%20RFC--Editor-lightgrey)
  
 </div>
+
 Piattaforma per esplorare visivamente le relazioni storiche tra i documenti **RFC** dell'IETF (Internet Engineering Task Force) — in particolare i legami *Updates* e *Obsoletes* — tramite un **grafo 3D interattivo**, affiancato da una **timeline** dedicata ai documenti ancora in fase di bozza (Internet-Draft).
  
 Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'Università Roma Tre.
  
----
- 
-## 📑 Indice
- 
-- [A chi è rivolto](#-a-chi-è-rivolto)
-- [Anteprima](#-anteprima)
-- [Come iniziare](#-come-iniziare)
-  - [Opzione consigliata — dataset già pronto](#opzione-consigliata--dataset-già-pronto-pochi-minuti)
-  - [Opzione completa — pipeline dati da zero](#opzione-completa--pipeline-dati-da-zero-anche-diverse-ore)
-- [Architettura](#-architettura)
-- [Struttura del repository](#-struttura-del-repository)
-- [Componenti principali del backend](#-componenti-principali-del-backend)
-- [Relazione di progetto](#-relazione-di-progetto)
-- [Riferimenti](#-riferimenti)
-- [Autore](#-autore)
 ---
  
 ## 🎯 A chi è rivolto
@@ -76,7 +63,7 @@ npx ng build
 ```
  
 > [!TIP]
-> Il comando chiave è **`npx ng build`** (o `npx ng serve` per lo sviluppo con reload automatico), **non** `npm run build` / `npm start`. La differenza non è stilistica: `npx ng ...` chiama direttamente Angular CLI **senza** passare dagli hook `prestart`/`prebuild` di npm, che altrimenti rilanciano comunque l'intera pipeline dati Python sopra il dataset appena scaricato (vedi il riquadro rosso sotto). Con `npx` il dataset scaricato viene usato così com'è, e la build richiede solo pochi minuti.
+> Il comando chiave è **`npx ng build`** (o `npx ng serve` per lo sviluppo con reload automatico), **non** `npm run build` / `npm start`. La differenza non è stilistica: `npx ng ...` chiama direttamente Angular CLI **senza** passare dagli hook `prestart`/`prebuild` di npm, che altrimenti rilanciano comunque l'intera pipeline dati Python sopra il dataset appena scaricato per aggiornarlo con i dati più recenti dell'indice IETF, includendo gli ultimi RFC pubblicati e gli Internet-Draft aggiornati. Con `npx` il dataset scaricato viene usato così com'è, e la build richiede solo pochi istanti.
  
 Avvia poi un server HTTP locale nella cartella di build (`dist/infovis/browser/`), ad esempio con il server integrato di PHP:
  
@@ -154,8 +141,8 @@ RFC-graph-visualizer/
 │
 ├── docs/
 │   ├── Progetto_Infovis/
-│   │   ├── Relazione_Progetto_RFC-Graph-Visualizer.md   # Relazione di progetto completa (problema, dati, design, risultati, sviluppi futuri)
-│   │   └── img/                                          # Screenshot referenziati dalla relazione e da questo README
+│   │   ├── img/                                         # Screenshot referenziati dalla relazione e da questo README
+│   │   └── Relazione_Progetto_RFC-Graph-Visualizer.md   # Relazione di progetto completa (problema, dati, design, risultati, sviluppi futuri)
 │   └── comandi_per_testare.md        # Comandi per clonare il repo, testare i singoli script backend, avviare il frontend
 │
 ├── infovis/                          # Frontend Angular standalone
