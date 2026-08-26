@@ -27,7 +27,7 @@ source venv/bin/activate
 9. [Rigenerare il dataset da zero — dataset assente](#9-rigenerare-il-dataset-da-zero--dataset-assente)
 10. [Stato disallineato — dataset assente o sostituito con uno più vecchio](#10-stato-disallineato--dataset-assente-o-sostituito-con-uno-più-vecchio)
     - [10c. Perché cancellare solo `.state/` non basta, e come risolvere davvero](#10c-perché-cancellare-solo-state-non-basta-e-come-risolvere-davvero)
-11. [Casi senza rischi — aggiornamento normale e dataset scaricato poi aggiornato](#11-casi-senza-rischi--aggiornamento-normale-e-dataset-scaricato-poi-aggiornato)
+11. [Casi senza rischi — aggiornamento normale e dataset pronto poi aggiornato](#11-casi-senza-rischi--aggiornamento-normale-e-dataset-pronto-poi-aggiornato)
 
 ---
 
@@ -394,7 +394,7 @@ Tempo dopo il reset: nel caso 10b (dataset presente), decine di minuti o ore, li
 
 ---
 
-## 11. Casi senza rischi — aggiornamento normale e dataset scaricato poi aggiornato
+## 11. Casi senza rischi — aggiornamento normale e dataset pronto poi aggiornato
 
 Due situazioni frequenti nell'uso reale, entrambe **senza il rischio di correttezza del §10**: non serve cancellare né `.state/` né `.cache/`.
 
@@ -410,9 +410,11 @@ npm run build     # oppure: npm start
 > [!WARNING]
 > Non è un aggiornamento a costo fisso di pochi minuti. Oltre alle novità, `recheck_active_drafts()` ririnterroga Datatracker **a ogni run**, un documento alla volta e sempre con `bypass_cache=True` (mai dalla cache locale), tutti i draft con stato `active`/`expired` già presenti nel dataset — serve per accorgersi se uno di loro è nel frattempo diventato RFC o è stato abbandonato. Il tempo scala quindi con **quanti draft attivi sono già tracciati**, non solo con quanto è cambiato dall'ultima volta: con molti draft attivi accumulati, anche un run "normale" può richiedere decine di minuti o ore.
 
-### 11b. Dataset scaricato dalla release, poi aggiornato via pipeline
+Vale anche se il dataset è stato sostituito con uno **più recente** (es. release nuova sopra un dataset locale più vecchio): è l'opposto del §10b, quindi lo stato è più indietro del dataset, non il contrario — nessun buco possibile. `last_draft_fetch_iso` produce solo una query "since" più ampia, i draft già presenti vengono scartati via `existing_ids`, e il recheck ignora comunque la cache. Nessuna cancellazione necessaria: solo qualche pagina Datatracker in più, scaricata e scartata.
 
-Situazione diversa dal §10, anche se solo all'apparenza simile: il dataset è presente (scaricato dalla [release](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v2), non generato localmente), ma `backend/.state` e `backend/.cache` sono **entrambi assenti**, perché la pipeline non ha mai girato su questa macchina. Passare da `npx ng build` a `npm run build` in questa condizione:
+### 11b. Dataset pronto (da release o altrove), poi aggiornato via pipeline
+
+Situazione diversa dal §10, anche se solo all'apparenza simile: il dataset è presente (scaricato dalla [release](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v2) o preso da un'altra run/macchina, non generato localmente), ma `backend/.state` e `backend/.cache` sono **entrambi assenti**, perché la pipeline non ha mai girato su questa macchina. Passare da `npx ng build` a `npm run build` in questa condizione:
 
 - **non riproduce il bug del §10c** — la cache è vuota, non vecchia: non c'è nulla di stantio da servire, la scansione è reale e fresca;
 - **ma resta comunque una scansione completa dei draft**, non incrementale (manca `last_draft_fetch_iso`): considerando la presenza di circa 35.000 Internet-Draft all'interno del Datatracker e una paginazione impostata a 50 elementi per pagina, la pipeline processerà complessivamente circa 700 pagine; dipendendo principalmente dalla latenza e dal throttling delle richieste di rete, il tempo di esecuzione aggiuntivo stimato si attesta nell'ordine di qualche minuto in più rispetto al caso normale (§11a) — che a sua volta, per il ricontrollo dei draft attivi appena descritto, non è già di per sé un caso rapido — non certo il tempo di un vero primo run (§9), perché gli RFC restano veloci (già risolti nel dataset scaricato, `enrich` li salta).
