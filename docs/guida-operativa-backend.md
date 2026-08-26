@@ -387,7 +387,7 @@ Poi rilancia normalmente — direttamente o tramite `npm start`/`npm run build`/
 python rfc_pipeline.py enrich --input output/graph_data.json --output output/graph_data_enriched.json
 ```
 
-Tempo dopo il reset: nel caso 10b (dataset presente), leggero, limitato al ripescaggio fresco dei draft. Nel caso 10a (dataset assente), comunque **ore** come in un vero primo run (§9) — qui la cache cancellata include anche quella, legittima, degli RFC già noti: nessun problema di correttezza (quell'arricchimento va comunque rifatto per intero), solo un piccolo overhead di rete in più.
+Tempo dopo il reset: nel caso 10b (dataset presente), decine di minuti o ore, limitato al ripescaggio fresco e all'aggiornamento dei draft. Nel caso 10a (dataset assente), comunque **ore** come in un vero primo run (§9) — qui la cache cancellata include anche quella, legittima, degli RFC già noti: nessun problema di correttezza (quell'arricchimento va comunque rifatto per intero), solo un piccolo overhead di rete in più.
 
 > [!NOTE]
 > `rm -rf .state/` cancella anche lo stato di `draft_metadata_enricher.py` (§5, §8): previsto, dato che lavora sui draft appena ripescati e va comunque rilanciato dopo un `enrich` completo.
