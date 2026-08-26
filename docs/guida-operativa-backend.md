@@ -337,7 +337,7 @@ python purge_phantom_draft_nodes.py --input ../infovis/public/data/graph_data_en
 ```
 
 > [!TIP]
-> Se non hai intenzione di aspettare ore, l'alternativa è **non** lanciare la pipeline: scarica il dataset già pronto dalla sezione [Releases](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v2) del repository e builda con `npx ng build` (salta gli hook npm) — vedi la [sezione 1 del README](../README.md#1--dataset-pronto-via-veloce).
+> Se non hai intenzione di aspettare ore, l'alternativa è **non** lanciare la pipeline: scarica il dataset già pronto dalla sezione [Releases](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v2) del repository (o prendilo da un'altra run) e builda con `npx ng build` (salta gli hook npm) — vedi la [sezione 1 del README](../README.md#1--dataset-pronto-via-veloce).
 
 ---
 

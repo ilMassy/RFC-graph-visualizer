@@ -71,6 +71,8 @@ npx ng build
 
 Poi, dentro `dist/infovis/browser/`: `php -S 127.0.0.1:8888` → apri `http://127.0.0.1:8888`.
 
+Vale anche con un dataset già pronto da un'altra run (non dalla release): copialo in `infovis/public/data/` se non è già lì, prima di `npx ng build`.
+
 ### 2. 📦 Dataset scaricato, poi aggiornato via pipeline
 
 Hai seguito il [§1](#1--dataset-pronto-via-veloce), ma vuoi aggiornare il dataset lanciando la pipeline invece di limitarti a `npx ng build`:
