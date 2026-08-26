@@ -27,6 +27,7 @@ source venv/bin/activate
 9. [Rigenerare il dataset da zero — dataset assente](#9-rigenerare-il-dataset-da-zero--dataset-assente)
 10. [Stato disallineato — dataset assente o sostituito con uno più vecchio](#10-stato-disallineato--dataset-assente-o-sostituito-con-uno-più-vecchio)
     - [10c. Perché cancellare solo `.state/` non basta, e come risolvere davvero](#10c-perché-cancellare-solo-state-non-basta-e-come-risolvere-davvero)
+11. [Casi senza rischi — aggiornamento normale e dataset scaricato poi aggiornato](#11-casi-senza-rischi--aggiornamento-normale-e-dataset-scaricato-poi-aggiornato)
 
 ---
 
@@ -301,7 +302,7 @@ rm -rf backend/.cache/datatracker
 > [!WARNING]
 > **`npm install` seguito da `npm start` o `npm run build`, con `graph_data_enriched.json` assente, lancia in automatico l'intera pipeline** (`update_dataset.sh`, §6): la fase `(0/4)` rileva l'assenza del file e logga *"nessun dataset preesistente ... prima run da zero"*, poi procede comunque con `(1/4)`–`(3/4)`.
 
-Vero primo run — repository appena clonato, **niente dataset e niente stato** (`backend/.state`, `backend/.cache` assenti anch'essi): è lo scenario della [sezione 2 del README](../README.md#2--pipeline-dati-repository-nuovo-o-dataset-assente). Ogni singolo nodo (RFC + Internet-Draft, ~44.000 documenti) va risolto da zero tramite l'API IETF Datatracker, soggetta a **rate limiting** (0.5s per richiesta): il run richiede **diverse ore**, non minuti.
+Vero primo run — repository appena clonato, **niente dataset e niente stato** (`backend/.state`, `backend/.cache` assenti anch'essi): è lo scenario della [sezione 4 del README](../README.md#4--pipeline-dati-repository-nuovo-o-dataset-assente). Ogni singolo nodo (RFC + Internet-Draft, ~44.000 documenti) va risolto da zero tramite l'API IETF Datatracker, soggetta a **rate limiting** (0.5s per richiesta): il run richiede **diverse ore**, non minuti.
 
 ```bash
 git clone https://github.com/ilMassy/RFC-graph-visualizer.git
@@ -390,3 +391,30 @@ Tempo dopo il reset: nel caso 10b (dataset presente), leggero, limitato al ripes
 
 > [!NOTE]
 > `rm -rf .state/` cancella anche lo stato di `draft_metadata_enricher.py` (§5, §8): previsto, dato che lavora sui draft appena ripescati e va comunque rilanciato dopo un `enrich` completo.
+
+---
+
+## 11. Casi senza rischi — aggiornamento normale e dataset scaricato poi aggiornato
+
+Due situazioni frequenti nell'uso reale, entrambe **senza il rischio di correttezza del §10**: non serve cancellare né `.state/` né `.cache/`.
+
+### 11a. Aggiornamento normale — dataset e `.state` locali coerenti
+
+Il caso quotidiano: dataset e `backend/.state` sono già presenti su questa macchina e coerenti tra loro. `last_draft_fetch_iso` avanza a ogni run, quindi la query dei *nuovi* draft cambia sempre → cache miss garantito, mai una risposta stantia (è il caso "sicuro" citato per contrasto al §10c). Gli RFC già risolti vengono saltati guardando il dataset di output. Rilancia normalmente:
+
+```bash
+cd infovis
+npm run build     # oppure: npm start
+```
+
+> [!WARNING]
+> Non è un aggiornamento a costo fisso di pochi minuti. Oltre alle novità, `recheck_active_drafts()` ririnterroga Datatracker **a ogni run**, un documento alla volta e sempre con `bypass_cache=True` (mai dalla cache locale), tutti i draft con stato `active`/`expired` già presenti nel dataset — serve per accorgersi se uno di loro è nel frattempo diventato RFC o è stato abbandonato. Il tempo scala quindi con **quanti draft attivi sono già tracciati**, non solo con quanto è cambiato dall'ultima volta: con molti draft attivi accumulati, anche un run "normale" può richiedere decine di minuti, non solo pochi.
+
+### 11b. Dataset scaricato dalla release, poi aggiornato via pipeline
+
+Situazione diversa dal §10, anche se solo all'apparenza simile: il dataset è presente (scaricato dalla [release](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v2), non generato localmente), ma `backend/.state` e `backend/.cache` sono **entrambi assenti**, perché la pipeline non ha mai girato su questa macchina. Passare da `npx ng build` a `npm run build` in questa condizione:
+
+- **non riproduce il bug del §10c** — la cache è vuota, non vecchia: non c'è nulla di stantio da servire, la scansione è reale e fresca;
+- **ma resta comunque una scansione completa dei draft**, non incrementale (manca `last_draft_fetch_iso`): qualche minuto in più rispetto a un aggiornamento normale (§11a) — che a sua volta, per il ricontrollo dei draft attivi appena descritto, non è già di per sé un caso rapido — non certo le ore di un vero primo run (§9), perché gli RFC restano veloci (già risolti nel dataset scaricato, `enrich` li salta).
+
+Dopo questa prima esecuzione locale, `.state`/`.cache` vengono creati: i run successivi si comportano come il caso normale (§11a).

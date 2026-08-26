@@ -98,7 +98,7 @@ Il sistema è pensato per due profili distinti, a cui rispondono le due viste in
 
 ### 2.1 Fonti e pipeline di backend
 
-Il dataset è generato da una pipeline Python composta da quattro fasi eseguite sempre nello stesso ordine sullo stesso file di output (`graph_data_enriched.json`):
+Il dataset è generato da una pipeline Python composta da quattro fasi eseguite sempre nello stesso ordine: la prima produce un file intermedio, le successive tre leggono e riscrivono in place lo stesso file di output finale (`graph_data_enriched.json`):
 
 1. **`rfc_pipeline.py parse`** — scarica (in modo condizionale, via ETag/Last-Modified) `rfc-index.xml` da rfc-editor.org, estrae ogni entry RFC, costruisce nodi e archi Updates/Obsoletes escludendo le coppie contraddittorie, e calcola l'`impact_score` (§3.4, §5.1).
 2. **`rfc_pipeline.py enrich`** — arricchisce ogni nodo con `layer` di rete e `working_group`, risolti in modo autorevole tramite l'API pubblica IETF Datatracker (mai con un'euristica testuale di ripiego), e recupera gli Internet-Draft nei quattro stati del loro ciclo di vita.

@@ -17,6 +17,25 @@ Piattaforma per esplorare visivamente le relazioni storiche tra i documenti **RF
 
 Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'Università Roma Tre.
 
+<br>
+
+## 📑 Indice
+
+- [🎯 A chi è rivolto](#-a-chi-è-rivolto)
+- [🖼️ Anteprima](#-anteprima)
+- [🚀 Come iniziare](#-come-iniziare)
+  - [1. 🏁 Dataset pronto, via veloce](#1--dataset-pronto-via-veloce)
+  - [2. 📦 Dataset scaricato, poi aggiornato via pipeline](#2--dataset-scaricato-poi-aggiornato-via-pipeline)
+  - [3. 🔁 Aggiornamento normale (uso quotidiano)](#3--aggiornamento-normale-uso-quotidiano)
+  - [4. 🐢 Pipeline dati (repository nuovo o dataset assente)](#4--pipeline-dati-repository-nuovo-o-dataset-assente)
+  - [5. 🔄 Stato disallineato (dataset assente o sostituito)](#5--stato-disallineato-dataset-assente-o-sostituito)
+- [🏗️ Architettura](#-architettura)
+- [📂 Struttura del repository](#-struttura-del-repository)
+- [🧩 Componenti principali del backend](#-componenti-principali-del-backend)
+- [📘 Relazione di progetto](#-relazione-di-progetto)
+- [📚 Riferimenti](#-riferimenti)
+- [👤 Autore](#-autore)
+
 ---
 
 ## 🎯 A chi è rivolto
@@ -50,8 +69,10 @@ Il sistema è pensato per due profili distinti, a cui rispondono le due viste de
 | Situazione | Comando | Tempo |
 |---|---|---|
 | Voglio partire subito, non mi serve il dataset più recente | [§1](#1--dataset-pronto-via-veloce) — scarica la release + `npx ng build` | pochi minuti |
-| Repository appena clonato, nessun dataset e nessuno stato pregresso | [§2](#2--pipeline-dati-repository-nuovo-o-dataset-assente) — `npm install && npm run build` | ore (rate limiting Datatracker) |
-| Dataset assente ma `backend/.state` esiste ancora, **oppure** dataset sostituito con uno più vecchio | [§3](#3--stato-disallineato-dataset-assente-o-sostituito) — `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore (comunque da rifare gli RFC) |
+| Ho scaricato il dataset dalla release ([§1](#1--dataset-pronto-via-veloce)) e voglio aggiornarlo con la pipeline | [§2](#2--dataset-scaricato-poi-aggiornato-via-pipeline) — `npm run build` al posto di `npx ng build` | minuti, poco sopra il caso normale |
+| Ho già un dataset generato da questa pipeline, coerente con `backend/.state` | [§3](#3--aggiornamento-normale-uso-quotidiano) — `npm run build` (oppure `npm start`), senza toccare nulla | minuti–decine di minuti (dipende dai draft attivi da ricontrollare) |
+| Repository appena clonato, nessun dataset e nessuno stato pregresso | [§4](#4--pipeline-dati-repository-nuovo-o-dataset-assente) — `npm install && npm run build` | ore (rate limiting Datatracker) |
+| Dataset assente ma `backend/.state` esiste ancora, **oppure** dataset sostituito con uno più vecchio | [§5](#5--stato-disallineato-dataset-assente-o-sostituito) — `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore (comunque da rifare gli RFC) |
 
 ### 1. 🏁 Dataset pronto, via veloce
 
@@ -69,7 +90,31 @@ npx ng build
 
 Poi, dentro `dist/infovis/browser/`: `php -S 127.0.0.1:8888` → apri `http://127.0.0.1:8888`.
 
-### 2. 🐢 Pipeline dati (repository nuovo o dataset assente)
+### 2. 📦 Dataset scaricato, poi aggiornato via pipeline
+
+Hai seguito il [§1](#1--dataset-pronto-via-veloce), ma vuoi aggiornare il dataset lanciando la pipeline invece di limitarti a `npx ng build`:
+
+```bash
+cd infovis
+npm run build     # oppure: npm start  (non npx ng build, che salterebbe la pipeline)
+```
+
+Dataset presente, ma `backend/.state`/`.cache` **assenti** (pipeline mai girata qui): nessun rischio di correttezza (niente cache vecchia da servire), ma il ricontrollo dei draft (vedi [§3](#3--aggiornamento-normale-uso-quotidiano)) parte da zero su tutto lo storico invece che sui soli draft già tracciati — qualche minuto in più del caso normale, non le ore di un primo run ([§4](#4--pipeline-dati-repository-nuovo-o-dataset-assente)), perché gli RFC restano veloci (già risolti nel dataset scaricato). Da qui in poi, con `.state`/`.cache` creati, i run successivi si comportano come il §3.
+
+📄 Dettagli → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#11-casi-senza-rischi--aggiornamento-normale-e-dataset-scaricato-poi-aggiornato).
+
+### 3. 🔁 Aggiornamento normale (uso quotidiano)
+
+Il caso più comune dopo il primo setup: dataset e `backend/.state` già presenti e coerenti. Rilancia senza cancellare nulla:
+
+```bash
+cd infovis
+npm run build     # oppure: npm start
+```
+
+Gli RFC già risolti vengono saltati guardando il dataset esistente, e `last_draft_fetch_iso` limita a ciò che è nuovo dall'ultimo run — ma **non è tutto**: a ogni run, ogni draft attivo/scaduto già nel dataset viene comunque ririnterrogato su Datatracker uno per uno, ignorando la cache (per accorgersi se è diventato RFC o è stato abbandonato). Il tempo cresce quindi con **quanti draft attivi sono già tracciati**, non solo con le novità — non è un'operazione a costo fisso di pochi minuti.
+
+### 4. 🐢 Pipeline dati (repository nuovo o dataset assente)
 
 ```bash
 git clone https://github.com/ilMassy/RFC-graph-visualizer.git
@@ -78,19 +123,19 @@ npm install
 npm run build     # oppure: npm start
 ```
 
-`update_dataset.sh` rileva da solo l'assenza del dataset e lo rigenera prima della build: risolve ~44.000 documenti via API Datatracker, soggetta a rate limiting → **ore**, sia a repository appena clonato sia se `backend/.state` esiste già da run precedenti (l'assenza del solo file dataset non velocizza nulla, anzi: vedi [§3](#3--stato-disallineato-dataset-assente-o-sostituito)).
+`update_dataset.sh` rileva l'assenza del dataset e lo rigenera prima della build: risolve ~44.000 documenti via API Datatracker, soggetta a rate limiting → **ore**, sia a repository appena clonato sia se `backend/.state` esiste già da run precedenti (l'assenza del solo file dataset non velocizza nulla: vedi [§5](#5--stato-disallineato-dataset-assente-o-sostituito)).
 
 📄 Dettagli e comandi manuali dei singoli script → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente).
 
-### 3. 🔄 Stato disallineato (dataset assente o sostituito)
+### 5. 🔄 Stato disallineato (dataset assente o sostituito)
 
-Stessa soluzione per due situazioni distinte, entrambe con `backend/.state` non coerente col dataset che si vuole ottenere:
+Stessa soluzione per due situazioni distinte, entrambe con `backend/.state` non coerente col dataset da ottenere:
 
-- **dataset cancellato ma stato rimasto** (es. hai ripulito solo `infovis/public/data/`): il dataset ricostruito ha comunque bisogno di **ore** per gli RFC (l'output mancante costringe a rielaborarli tutti, indipendentemente dallo stato) e in più risulta **incompleto sui draft**, perché lo stato ricorda solo la data dell'ultimo fetch e Datatracker restituisce quindi pochissimi draft, non l'intero storico (~34.000+);
-- **dataset sostituito con uno più vecchio** (backup, release precedente): stesso problema sui draft, per lo stesso motivo.
+- **dataset cancellato ma stato rimasto** (es. ripulita solo `infovis/public/data/`): comunque **ore** per gli RFC (output mancante → rielaborati tutti) e dataset **incompleto sui draft**, perché lo stato ricorda solo la data dell'ultimo fetch e Datatracker restituisce quindi pochi draft, non l'intero storico (~34.000+);
+- **dataset sostituito con uno più vecchio** (backup, release precedente): stesso problema sui draft, stesso motivo.
 
 > [!WARNING]
-> Cancellare solo `backend/.state/` **non basta**. Azzera la data dell'ultimo fetch, ma la query "tutti i draft" che ne risulta è identica, parola per parola, a una già eseguita in passato — e la sua risposta è ancora su disco in `backend/.cache/datatracker/`, che per design non scade mai. Risultato: i draft vengono letti dalla cache vecchia invece che richiesti di nuovo a Datatracker, senza errori né avvisi. Va cancellata **anche** quella cache, non solo lo stato — vale solo per questi due scenari, non per un aggiornamento incrementale normale né per un vero primo run ([§9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente)).
+> Cancellare solo `backend/.state/` **non basta**. Azzera la data dell'ultimo fetch, ma la query "tutti i draft" risultante è identica a una già eseguita in passato — e la risposta è ancora su disco in `backend/.cache/datatracker/`, che non scade mai. I draft finiscono letti dalla cache vecchia invece che richiesti di nuovo, senza errori né avvisi. Va cancellata **anche** quella cache — vale solo per questi due scenari, non per un aggiornamento normale né per un vero primo run ([§9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente)).
 
 ```bash
 cd backend
