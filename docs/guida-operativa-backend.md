@@ -26,7 +26,6 @@ source venv/bin/activate
 8. [Pulizia tra un test e l'altro](#8-pulizia-tra-un-test-e-laltro)
 9. [Rigenerare il dataset da zero — dataset assente](#9-rigenerare-il-dataset-da-zero--dataset-assente)
 10. [Stato disallineato — dataset assente o sostituito con uno più vecchio](#10-stato-disallineato--dataset-assente-o-sostituito-con-uno-più-vecchio)
-    - [10c. Perché cancellare solo `.state/` non basta, e come risolvere davvero](#10c-perché-cancellare-solo-state-non-basta-e-come-risolvere-davvero)
 
 ---
 
@@ -364,20 +363,13 @@ Due problemi, non uno:
 
 Il file `graph_data_enriched.json` c'è, ma è stato **sostituito** con uno diverso e meno aggiornato (una release precedente, un backup, un dataset preso da un altro punto della cronologia del progetto), lasciando intatto `backend/.state/` prodotto da un run più recente. Qui l'arricchimento rete/working group degli RFC pubblicati resta veloce (guarda il contenuto del dataset presente, già risolto), ma i draft hanno lo stesso identico problema del punto 10a: `last_draft_fetch_iso` è più recente della data del dataset "vecchio", quindi i draft nella finestra intermedia non vengono mai ripescati — un buco silenzioso, senza errori né avvisi.
 
-### 10c. Perché cancellare solo `.state/` non basta, e come risolvere davvero
+### La soluzione, identica in entrambi i casi
 
-Cancellare `backend/.state/` azzera `last_draft_fetch_iso`, quindi la query dei draft torna a essere una scansione completa — "tutti i draft", senza filtro temporale — identica a quella di un vero primo run (§9). Il problema: **quella identica query è già stata eseguita in passato**, e la sua risposta è ancora su disco in `backend/.cache/datatracker/`, cache che per design (§2, §8) non scade mai. Lo script *crede* di fare una scansione fresca, ma la serve dalla cache — la fotografia di Datatracker del primo fetch, non quella di oggi. Ogni draft creato, scaduto o diventato RFC dopo quel primo fetch resta invisibile, senza errori né avvisi.
-
-> [!IMPORTANT]
-> Il rischio è **specifico a 10a e 10b**, non generico a tutta la cache: nell'aggiornamento incrementale normale `last_draft_fetch_iso` cambia a ogni run → query diversa → cache miss garantito; nel vero primo run (§9) non esiste ancora nessuna cache vecchia da leggere per errore. Riguarda solo, in pratica, chi cancella `.state/` su una macchina che ha già fatto almeno una scansione completa in passato — cioè 10a/10b.
->
-> Gli RFC non ne risentono: `rfc-index.xml` è sempre riscaricato fresco, e un RFC mai visto prima interroga una URL nuova → cache miss garantito. Resta un solo caso limite, accettato per design: un RFC noto il cui working group/layer sia cambiato su Datatracker dopo la prima cache resterebbe congelato al valore vecchio.
-
-**Soluzione**: cancellare **sia** `.state/` **sia** la cache HTTP di `enrich`, `.cache/datatracker/` (non `.cache/datatracker_docdetail/`, quella di `draft_metadata_enricher.py`, estranea al problema):
+Cancellare `backend/.state/` **prima** di rilanciare, così da azzerare `last_draft_fetch_iso` e forzare Datatracker a restituire di nuovo tutti i draft:
 
 ```bash
 cd backend
-rm -rf .state/ .cache/datatracker/
+rm -rf .state/
 ```
 
 Poi rilancia normalmente — direttamente o tramite `npm start`/`npm run build`/`update_dataset.sh` (§6):
@@ -386,7 +378,7 @@ Poi rilancia normalmente — direttamente o tramite `npm start`/`npm run build`/
 python rfc_pipeline.py enrich --input output/graph_data.json --output output/graph_data_enriched.json
 ```
 
-Tempo dopo il reset: nel caso 10b (dataset presente), leggero, limitato al ripescaggio fresco dei draft. Nel caso 10a (dataset assente), comunque **ore** come in un vero primo run (§9) — qui la cache cancellata include anche quella, legittima, degli RFC già noti: nessun problema di correttezza (quell'arricchimento va comunque rifatto per intero), solo un piccolo overhead di rete in più.
+Il tempo che ci vuole dopo il reset dipende dal caso di partenza: nel caso 10b (dataset presente) è un'operazione leggera, limitata al ripescaggio dei draft; nel caso 10a (dataset assente) richiede comunque **ore**, perché — reset di stato a parte — l'intero arricchimento rete/working group degli RFC va comunque rifatto da zero, esattamente come in un vero primo run (§9).
 
 > [!NOTE]
-> `rm -rf .state/` cancella anche lo stato di `draft_metadata_enricher.py` (§5, §8): previsto, dato che lavora sui draft appena ripescati e va comunque rilanciato dopo un `enrich` completo.
+> `rm -rf .state/` qui cancella anche lo stato di `draft_metadata_enricher.py` (§5, §8): è previsto, dato che quello script lavora sui draft appena ripescati e va comunque rilanciato dopo un `enrich` completo.

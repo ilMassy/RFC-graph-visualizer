@@ -68,7 +68,7 @@ Il sistema è pensato per due profili distinti, a cui rispondono le due viste de
 |---|---|---|
 | Voglio partire subito, non mi serve il dataset più recente | [§1](#1--dataset-pronto-via-veloce) — scarica la release + `npx ng build` | pochi minuti |
 | Repository appena clonato, nessun dataset e nessuno stato pregresso | [§2](#2--pipeline-dati-repository-nuovo-o-dataset-assente) — `npm install && npm run build` | ore (rate limiting Datatracker) |
-| Dataset assente ma `backend/.state` esiste ancora, **oppure** dataset sostituito con uno più vecchio | [§3](#3--stato-disallineato-dataset-assente-o-sostituito) — `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore (comunque da rifare gli RFC) |
+| Dataset assente ma `backend/.state` esiste ancora, **oppure** dataset sostituito con uno più vecchio | [§3](#3--stato-disallineato-dataset-assente-o-sostituito) — `rm -rf backend/.state/` poi `npm run build` | ore (comunque da rifare gli RFC) |
 
 ### 1. 🏁 Dataset pronto, via veloce
 
@@ -106,12 +106,9 @@ Stessa soluzione per due situazioni distinte, entrambe con `backend/.state` non 
 - **dataset cancellato ma stato rimasto** (es. hai ripulito solo `infovis/public/data/`): il dataset ricostruito ha comunque bisogno di **ore** per gli RFC (l'output mancante costringe a rielaborarli tutti, indipendentemente dallo stato) e in più risulta **incompleto sui draft**, perché lo stato ricorda solo la data dell'ultimo fetch e Datatracker restituisce quindi pochissimi draft, non l'intero storico (~34.000+);
 - **dataset sostituito con uno più vecchio** (backup, release precedente): stesso problema sui draft, per lo stesso motivo.
 
-> [!WARNING]
-> Cancellare solo `backend/.state/` **non basta**. Azzera la data dell'ultimo fetch, ma la query "tutti i draft" che ne risulta è identica, parola per parola, a una già eseguita in passato — e la sua risposta è ancora su disco in `backend/.cache/datatracker/`, che per design non scade mai. Risultato: i draft vengono letti dalla cache vecchia invece che richiesti di nuovo a Datatracker, senza errori né avvisi. Va cancellata **anche** quella cache, non solo lo stato — vale solo per questi due scenari, non per un aggiornamento incrementale normale né per un vero primo run ([§9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente)).
-
 ```bash
 cd backend
-rm -rf .state/ .cache/datatracker/
+rm -rf .state/
 cd ../infovis
 npm run build     # oppure: npm start
 ```
