@@ -73,6 +73,8 @@ Poi, dentro `dist/infovis/browser/`: `php -S 127.0.0.1:8888` → apri `http://12
 
 Vale anche con un dataset già pronto da un'altra run (non dalla release): copialo in `infovis/public/data/` se non è già lì, prima di `npx ng build`.
 
+`npx ng build` salta la pipeline (§2–§5): a differenza di tutti gli altri casi, qui non contano né `backend/.state`, né `backend/.cache`, né la provenienza o "età" del dataset — basta che il file sia presente.
+
 ### 2. 📦 Dataset pronto, poi aggiornato via pipeline
 
 Hai un dataset già pronto (dalla release come nel [§1](#1--dataset-pronto-via-veloce), o preso da un'altra run/macchina), ma vuoi aggiornarlo lanciando la pipeline invece di limitarti a `npx ng build`:
