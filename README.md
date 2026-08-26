@@ -50,7 +50,7 @@ Il sistema è pensato per due profili distinti, a cui rispondono le due viste de
 | Situazione | Comando | Tempo |
 |---|---|---|
 | Voglio partire subito, non mi serve il dataset più recente | [§1](#1--dataset-pronto-via-veloce) — scarica la release + `npx ng build` | pochi minuti |
-| Ho scaricato il dataset dalla release ([§1](#1--dataset-pronto-via-veloce)) e voglio aggiornarlo con la pipeline (prima run) | [§2](#2--dataset-scaricato-poi-aggiornato-via-pipeline) — `npm run build` al posto di `npx ng build` | ore, poco sopra il caso normale |
+| Ho scaricato il dataset dalla release ([§1](#1--dataset-pronto-via-veloce)) e voglio aggiornarlo con la pipeline (primo run) | [§2](#2--dataset-scaricato-poi-aggiornato-via-pipeline) — `npm run build` al posto di `npx ng build` | ore, poco sopra il caso normale |
 | Ho già un dataset generato da questa pipeline, coerente con `backend/.state` | [§3](#3--aggiornamento-normale-uso-quotidiano) — `npm run build` (oppure `npm start`), senza toccare nulla | ore (dipende dai draft attivi da ricontrollare) |
 | Repository appena clonato, nessun dataset e nessuno stato pregresso | [§4](#4--pipeline-dati-repository-nuovo-o-dataset-assente) — `npm install && npm run build` | ore (rate limiting Datatracker) |
 | Dataset assente ma `backend/.state` esiste ancora, **oppure** dataset sostituito con uno più vecchio | [§5](#5--stato-disallineato-dataset-assente-o-sostituito) — `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore (comunque da rifare gli RFC o draft) |
