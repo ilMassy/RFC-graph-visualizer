@@ -272,6 +272,8 @@ A questo punto il frontend è raggiungibile su `http://127.0.0.1:8888`. Per ferm
 > [!NOTE]
 > Questo è un server di sviluppo/test minimale (serve solo file statici, nessuna configurazione di caching/compressione/HTTPS) — va bene per verificare il risultato di una build locale, non è pensato per un deploy in produzione.
 
+In alternativa, `npm start` (o `npx ng serve` per saltare l'hook `prestart`) avvia da solo un server di sviluppo Angular con live reload, stampando l'URL in console (di norma `http://localhost:4200`): non serve `php -S` né servire `dist/` a mano. Anche qui, per fermare: `Ctrl+C`.
+
 ---
 
 ## 8. Pulizia tra un test e l'altro

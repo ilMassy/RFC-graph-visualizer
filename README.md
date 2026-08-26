@@ -55,6 +55,8 @@ Il sistema è pensato per due profili distinti, a cui rispondono le due viste de
 | Repository appena clonato, nessun dataset e nessuno stato pregresso | [§4](#4--pipeline-dati-repository-nuovo-o-dataset-assente) — `npm install && npm run build` | ore (rate limiting Datatracker) |
 | Dataset assente ma `backend/.state` esiste ancora, **oppure** dataset sostituito con uno più vecchio (aggiornamento) | [§5](#5--stato-disallineato-dataset-assente-o-sostituito) — `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore (comunque da rifare gli RFC o draft) |
 
+Accesso: con `npm start`/`npx ng serve` apri l'URL in console (di norma `http://localhost:4200`); con `npm run build`/`npx ng build` usa `php -S 127.0.0.1:8888` dentro `dist/infovis/browser/` → `http://127.0.0.1:8888`. Stop: `Ctrl+C`.
+
 ### 1. 🏁 Dataset pronto, via veloce
 
 ```bash
@@ -68,8 +70,6 @@ cd infovis
 npm install       
 npx ng build
 ```
-
-Poi, dentro `dist/infovis/browser/`: `php -S 127.0.0.1:8888` → apri `http://127.0.0.1:8888`.
 
 Vale anche con un dataset già pronto da un'altra run (non dalla release): copialo in `infovis/public/data/` se non è già lì, prima di `npx ng build`.
 
