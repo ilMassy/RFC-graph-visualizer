@@ -80,7 +80,7 @@ cd infovis
 npm run build     # oppure: npm start  (non npx ng build, che salterebbe la pipeline)
 ```
 
-Dataset presente, ma `backend/.state`/`.cache` **assenti** (pipeline mai girata qui): nessun rischio di correttezza (niente cache vecchia da servire), ma il ricontrollo dei draft (vedi [§3](#3--aggiornamento-normale-uso-quotidiano)) parte da zero su tutto lo storico invece che sui soli draft già tracciati — qualche minuto in più del caso normale, non le ore di un primo run ([§4](#4--pipeline-dati-repository-nuovo-o-dataset-assente)), perché gli RFC restano veloci (già risolti nel dataset scaricato). Da qui in poi, con `.state`/`.cache` creati, i run successivi si comportano come il §3.
+Dataset presente, ma `backend/.state`/`.cache` **assenti** (pipeline mai girata qui): nessun rischio di correttezza (niente cache vecchia da servire), ma il ricontrollo dei draft (vedi [§3](#3--aggiornamento-normale-uso-quotidiano)) parte da zero su tutto lo storico invece che sui soli draft già tracciati — considerando la presenza di circa 35.000 Internet-Draft all'interno del Datatracker e una paginazione impostata a 50 elementi per pagina, la pipeline processerà complessivamente circa 700 pagine; il tempo di esecuzione aggiuntivo stimato rispetto al caso normale si attesta nell'ordine di qualche minuto, dipendendo principalmente dalla latenza e dal throttling delle richieste di rete. Da qui in poi, con `.state`/`.cache` creati, i run successivi si comportano come il §3.
 
 📄 Dettagli → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#11-casi-senza-rischi--aggiornamento-normale-e-dataset-scaricato-poi-aggiornato).
 
