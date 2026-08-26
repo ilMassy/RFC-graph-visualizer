@@ -408,7 +408,7 @@ npm run build     # oppure: npm start
 ```
 
 > [!WARNING]
-> Non è un aggiornamento a costo fisso di pochi minuti. Oltre alle novità, `recheck_active_drafts()` ririnterroga Datatracker **a ogni run**, un documento alla volta e sempre con `bypass_cache=True` (mai dalla cache locale), tutti i draft con stato `active`/`expired` già presenti nel dataset — serve per accorgersi se uno di loro è nel frattempo diventato RFC o è stato abbandonato. Il tempo scala quindi con **quanti draft attivi sono già tracciati**, non solo con quanto è cambiato dall'ultima volta: con molti draft attivi accumulati, anche un run "normale" può richiedere decine di minuti, non solo pochi.
+> Non è un aggiornamento a costo fisso di pochi minuti. Oltre alle novità, `recheck_active_drafts()` ririnterroga Datatracker **a ogni run**, un documento alla volta e sempre con `bypass_cache=True` (mai dalla cache locale), tutti i draft con stato `active`/`expired` già presenti nel dataset — serve per accorgersi se uno di loro è nel frattempo diventato RFC o è stato abbandonato. Il tempo scala quindi con **quanti draft attivi sono già tracciati**, non solo con quanto è cambiato dall'ultima volta: con molti draft attivi accumulati, anche un run "normale" può richiedere decine di minuti o ore.
 
 ### 11b. Dataset scaricato dalla release, poi aggiornato via pipeline
 
