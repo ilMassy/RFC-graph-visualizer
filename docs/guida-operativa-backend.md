@@ -359,7 +359,7 @@ INFO: Query draft/aborted: 1 pagine, 40 documenti trovati, [...]
 Due problemi, non uno:
 
 1. **Non è più veloce** — *"da processare: 9830"* è il totale dei nodi di questo run: gli RFC vanno rielaborati **tutti**, perché `enrich` decide cosa è già risolto guardando il dataset di output, che qui manca. Il numero *"già processati: 44993"* è solo un contatore storico di `enriched_ids` accumulato nel tempo, e non evita il rate limiting su questo run → **ore**, come in un vero primo run (§9).
-2. **Il dataset risulta incompleto** — il recupero dei draft si basa su una data, `last_draft_fetch_iso`, salvata in `backend/.state/enricher_state.json`: Datatracker restituisce solo i draft modificati **da quella data in poi**. Nel log sopra: *"40 documenti trovati"*, non le decine di migliaia attese (~34.000+ Internet-Draft) — confermato anche contando i nodi di un dataset prodotto così: 9870 nodi totali, di cui solo 40 draft/aborted.
+2. **Il dataset risulta incompleto** — il recupero dei draft si basa su una data, `last_draft_fetch_iso`, salvata in `backend/.state/enricher_state.json`: Datatracker restituisce solo i draft modificati **da quella data in poi**. Nel log sopra: *"40 documenti trovati"*, non le decine di migliaia attese (~34.000+ Internet-Draft).
 
 ### 10b. Dataset sostituito con uno più vecchio
 
