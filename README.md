@@ -91,7 +91,7 @@ Stessa soluzione per due situazioni distinte, entrambe con `backend/.state` non 
 
 ```bash
 cd backend
-rm -rf .state/
+rm -rf .state/ .cache/datatracker/
 cd ../infovis
 npm run build     # oppure: npm start
 ```
