@@ -17,23 +17,6 @@ Piattaforma per esplorare visivamente le relazioni storiche tra i documenti **RF
 
 Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'Università Roma Tre.
 
-<br>
-
-## 📑 Indice
-
-- [🎯 A chi è rivolto](#-a-chi-è-rivolto)
-- [🖼️ Anteprima](#-anteprima)
-- [🚀 Come iniziare](#-come-iniziare)
-  - [1. 🏁 Dataset pronto, via veloce](#1--dataset-pronto-via-veloce)
-  - [2. 🐢 Pipeline dati (repository nuovo o dataset assente)](#2--pipeline-dati-repository-nuovo-o-dataset-assente)
-  - [3. 🔄 Stato disallineato (dataset assente o sostituito)](#3--stato-disallineato-dataset-assente-o-sostituito)
-- [🏗️ Architettura](#-architettura)
-- [📂 Struttura del repository](#-struttura-del-repository)
-- [🧩 Componenti principali del backend](#-componenti-principali-del-backend)
-- [📘 Relazione di progetto](#-relazione-di-progetto)
-- [📚 Riferimenti](#-riferimenti)
-- [👤 Autore](#-autore)
-
 ---
 
 ## 🎯 A chi è rivolto
