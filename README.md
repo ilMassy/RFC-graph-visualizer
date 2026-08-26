@@ -61,11 +61,12 @@ Il sistema è pensato per due profili distinti, a cui rispondono le due viste de
 git clone https://github.com/ilMassy/RFC-graph-visualizer.git
 cd RFC-graph-visualizer
 
+# se vuoi usare l'ultima versione del dataset del repository
 wget https://github.com/ilMassy/RFC-graph-visualizer/releases/download/dataset-v2/graph_data_enriched.zip
 unzip graph_data_enriched.zip -d infovis/public/data/
 
 cd infovis
-npm install
+npm install       # se non l'hai già installato
 npx ng build
 ```
 
