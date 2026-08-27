@@ -244,7 +244,7 @@ In alternativa, `npm start`/`npx ng serve` avvia un server di sviluppo con live 
 ## 8. Pulizia tra un test e l'altro
 
 > [!WARNING]
-> Rilancia solo dopo un run **concluso per intero**. Un'interruzione pulita (`Ctrl+C`) è sicura; una **a forza** (kill -9, crash) no — stato/output/cache di `rfc_pipeline.py` non sono scritti atomicamente. In quel caso, **dentro `backend/`**: `rm -rf .state/ .cache/datatracker/`. `draft_metadata_enricher.py` scrive già in modo atomico: non richiede questa pulizia.
+> Rilancia solo dopo un run **concluso per intero**. Stato/output/cache di `rfc_pipeline.py` non sono scritti atomicamente. In quel caso, **dentro `backend/`**: `rm -rf .state/ .cache/datatracker/`.
 
 Reset completo di `rfc_pipeline.py` (la prossima `enrich` rifà tutte le chiamate a Datatracker):
 
