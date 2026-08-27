@@ -80,7 +80,7 @@ cd infovis
 npm run build     # oppure: npm start (non npx ng build, che salterebbe la pipeline)
 ```
 
-Senza `backend/.state`/`.cache` locali, il ricontrollo dei draft (§3) parte dall'intero storico invece che dai soli draft tracciati: circa 35.000 Internet-Draft su Datatracker, paginazione a 50 elementi per pagina → circa 700 pagine da scorrere — qualche minuto extra rispetto al caso normale, considerando la latenza delle richieste di rete, non ore. Dettagli → [guida operativa](docs/guida-operativa-backend.md#11-casi-senza-rischi).
+Senza `backend/.state`/`.cache` locali, il ricontrollo dei draft (§3) parte dall'intero storico invece che dai soli draft tracciati: circa 35.000 Internet-Draft su Datatracker, paginazione a 50 elementi per pagina → circa 700 pagine da scorrere — qualche minuto extra rispetto al caso normale, considerando la latenza delle richieste di rete, non ore. Dettagli → [guida operativa §11](docs/guida-operativa-backend.md#11-casi-senza-rischi).
 
 ### 3. 🔁 Aggiornamento normale (uso quotidiano)
 
@@ -91,7 +91,7 @@ npm run build     # oppure: npm start
 
 Gli RFC già risolti vengono saltati; i draft attivi/scaduti già nel dataset vengono invece sempre ririnterrogati uno per uno (per accorgersi se sono diventati RFC o sono stati abbandonati) — il tempo cresce quindi con quanti draft attivi sono già tracciati, non solo con le novità.
 
-Vale anche se il dataset è stato sostituito con uno **più recente**: nessun rischio, è l'opposto del §5. Dettagli → [guida operativa](docs/guida-operativa-backend.md#11a-aggiornamento-normale).
+Vale anche se il dataset è stato sostituito con uno **più recente**: nessun rischio, è l'opposto del §5. Dettagli → [guida operativa §11a](docs/guida-operativa-backend.md#11a-aggiornamento-normale).
 
 ### 4. 🐢 Pipeline dati (repository nuovo o dataset assente)
 
