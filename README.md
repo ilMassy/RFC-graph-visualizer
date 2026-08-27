@@ -2,18 +2,17 @@
 
 # 🕸️ RFC Graph Visualizer
 
-**Esplora visivamente più di 40 anni di storia degli standard Internet dell'IETF**
+**Oltre 40 anni di standard Internet IETF, esplorati in un grafo 3D interattivo**
 
 ![Angular](https://img.shields.io/badge/Angular-standalone-DD0031?logo=angular&logoColor=white)
 ![D3.js](https://img.shields.io/badge/D3.js-force--directed-F9A03C?logo=d3dotjs&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3-3776AB?logo=python&logoColor=white)
 ![Status](https://img.shields.io/badge/stato-in%20sviluppo-yellow)
-![License](https://img.shields.io/badge/dati-IETF%20Datatracker%20%2B%20RFC--Editor-lightgrey)
 ![OS](https://img.shields.io/badge/OS-Unix--like-FCC624?logo=linux&logoColor=black)
 
 </div>
 
-Piattaforma per esplorare visivamente le relazioni storiche tra i documenti **RFC** dell'IETF (Internet Engineering Task Force) — in particolare i legami *Updates* e *Obsoletes* — tramite un **grafo 3D interattivo**, affiancato da una **timeline** dedicata ai documenti ancora in fase di bozza (Internet-Draft).
+Piattaforma per esplorare le relazioni storiche tra gli **RFC** dell'IETF (*Updates*/*Obsoletes*) in un **grafo 3D**, con una **timeline** separata per gli Internet-Draft ancora in bozza.
 
 Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolatori dell'Università Roma Tre.
 
@@ -21,46 +20,42 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 
 ## 🎯 A chi è rivolto
 
-Il sistema è pensato per due profili distinti, a cui rispondono le due viste del frontend:
-
-| Profilo | Esigenza | Vista dedicata |
+| Profilo | Esigenza | Vista |
 |---|---|---|
-| 🏛️ **Chi lavora dentro l'IETF** e vuole studiare lo stato dell'arte degli RFC | Visione d'insieme: quanti documenti esistono, come si sono succeduti nel tempo, quali sono stati storicamente i più rilevanti (`impact_score`), come si relazionano tra loro | **Grafo 3D** — tutti gli RFC pubblicati sempre visibili, filtro per decade e working group |
-| 🔎 **Chi consulta gli RFC per un interesse specifico** (es. un ricercatore universitario) | Ricerca puntuale: partire da un argomento o da un documento noto | **Ricerca testuale** per id/titolo/parola chiave + **Timeline** separata per draft/aborted |
+| 🏛️ **Chi lavora nell'IETF** | Visione d'insieme: quanti RFC esistono, come si relazionano, quali sono i più rilevanti | **Grafo 3D**, filtrabile per decade e working group |
+| 🔎 **Chi cerca un documento specifico** | Ricerca puntuale per id/titolo, anche tra le proposte non ancora RFC | **Ricerca testuale** + **Timeline** draft/aborted |
 
 ---
 
 ## 🖼️ Anteprima
 
 ![Grafo 3D con filtri per decade e working group](docs/Progetto_Infovis/img/grafo-filtri-decade-wg.png)
-
-*Vista a grafo 3D: nodi RFC filtrabili per decade e working group, con il pannello di dettaglio del documento selezionato.*
+*Grafo 3D: nodi filtrabili per decade/working group, pannello di dettaglio del documento selezionato.*
 
 ![Timeline con filtro per working group e conteggi](docs/Progetto_Infovis/img/timeline-dettaglio-draft.png)
-
-*Vista timeline draft/aborted: istogramma temporale filtrabile per working group, dettaglio del draft selezionato.*
+*Timeline draft/aborted: istogramma per anno, filtrabile per working group.*
 
 ---
 
 ## 🚀 Come iniziare
 
 > [!IMPORTANT]
-> Il dataset (`graph_data_enriched.json`) **non è versionato** (è nel `.gitignore`): va scaricato o generato. `npm run build` / `npm start` rigenerano sempre il dataset in automatico (hook `prebuild`/`prestart`, script `backend/update_dataset.sh`); `npx ng build` / `npx ng serve` lo saltano e usano il dataset così com'è.
+> `graph_data_enriched.json` non è versionato: `npm run build`/`npm start` lo generano in automatico; `npx ng build`/`npx ng serve` lo saltano e usano quello presente.
 >
-> `graph_data.json` è solo output intermedio: se lo tieni, deve essere della stessa run di `graph_data_enriched.json` (altrimenti dati vecchi restano congelati senza errori). Se hai dubbi, non tenerlo: verrà rigenerato da solo.
+> `graph_data.json` è solo output intermedio della fase `parse` (§1 guida operativa): se lo tieni in giro, deve essere della stessa run di `graph_data_enriched.json`, altrimenti dati vecchi restano congelati senza errori né avvisi. Nel dubbio, non tenerlo — viene rigenerato da solo.
 
 > [!WARNING]
-> Rilancia solo a run precedente concluso per intero. Se un run è stato interrotto **a forza** (kill -9, terminale chiuso, crash — non `Ctrl+C`), stato/output/cache di `rfc_pipeline.py` possono risultare corrotti (scrittura non atomica): cancella `backend/.state/ backend/.cache/datatracker/` prima di rilanciare — dettagli → [guida operativa §8](docs/guida-operativa-backend.md#8-pulizia-tra-un-test-e-laltro).
+> Rilancia solo dopo un run precedente concluso per intero (non un `kill -9` o un crash). In caso contrario, prima di rilanciare — **sempre dentro `backend/`**: `rm -rf .state/ .cache/datatracker/` — dettagli → [guida operativa §8](docs/guida-operativa-backend.md#8-pulizia-tra-un-test-e-laltro).
 
 | Situazione | Comando | Tempo |
 |---|---|---|
-| Voglio partire subito, non mi serve il dataset più recente | [§1](#1--dataset-pronto-via-veloce) — scarica la release + `npx ng build` | pochi minuti |
-| Ho un dataset pronto (dalla release o preso altrove) e voglio aggiornarlo con la pipeline (primo run su questa macchina) | [§2](#2--dataset-pronto-poi-aggiornato-via-pipeline) — `npm run build` al posto di `npx ng build` | ore, poco sopra il caso normale |
-| Ho già un dataset generato da questa pipeline, coerente con `backend/.state` — **o anche** sostituito con uno più recente (aggiornamento normale) | [§3](#3--aggiornamento-normale-uso-quotidiano) — `npm run build` (oppure `npm start`), senza toccare nulla | ore (dipende dai draft attivi da ricontrollare) |
-| Repository appena clonato, nessun dataset e nessuno stato pregresso | [§4](#4--pipeline-dati-repository-nuovo-o-dataset-assente) — `npm install && npm run build` | ore (rate limiting Datatracker) |
-| Dataset assente ma `backend/.state` esiste ancora, **oppure** dataset sostituito con uno più vecchio (aggiornamento) | [§5](#5--stato-disallineato-dataset-assente-o-sostituito) — `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore (comunque da rifare gli RFC o draft) |
+| Voglio partire subito, senza dataset più recente | [§1](#1--dataset-pronto-via-veloce): scarica la release + `npx ng build` | pochi minuti |
+| Ho un dataset, voglio aggiornarlo con la pipeline | [§2](#2--dataset-pronto-poi-aggiornato-via-pipeline): `npm run build` | qualche ora |
+| Uso quotidiano — dataset e stato già coerenti | [§3](#3--aggiornamento-normale-uso-quotidiano): `npm run build` | minuti–ore, secondo i draft attivi |
+| Repository nuovo, nessun dataset | [§4](#4--pipeline-dati-repository-nuovo-o-dataset-assente): `npm install && npm run build` | ore |
+| Dataset assente/sostituito ma stato pregresso presente | [§5](#5--stato-disallineato-dataset-assente-o-sostituito): `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore |
 
-Accesso: con `npm start`/`npx ng serve` apri l'URL in console (di norma `http://localhost:4200`); con `npm run build`/`npx ng build` usa `php -S 127.0.0.1:8888` dentro `dist/infovis/browser/` → `http://127.0.0.1:8888`. Stop: `Ctrl+C`.
+Accesso: `npm start`/`npx ng serve` → URL in console (`http://localhost:4200`); `npm run build`/`npx ng build` → `php -S 127.0.0.1:8888` dentro `dist/infovis/browser/`. Stop: `Ctrl+C`.
 
 ### 1. 🏁 Dataset pronto, via veloce
 
@@ -68,43 +63,35 @@ Accesso: con `npm start`/`npx ng serve` apri l'URL in console (di norma `http://
 git clone https://github.com/ilMassy/RFC-graph-visualizer.git
 cd RFC-graph-visualizer
 
-wget https://github.com/ilMassy/RFC-graph-visualizer/releases/download/dataset-v2/graph_data_enriched.zip
+wget https://github.com/ilMassy/RFC-graph-visualizer/releases/download/dataset-v3/graph_data_enriched.zip
 unzip graph_data_enriched.zip -d infovis/public/data/
 
 cd infovis
-npm install       
+npm install
 npx ng build       # oppure: npx ng serve
 ```
 
-Vale anche con un dataset già pronto da un'altra run (non dalla release): copialo in `infovis/public/data/` se non è già lì, prima di `npx ng build`.
-
-`npx ng build` salta la pipeline (§2–§5): a differenza di tutti gli altri casi, qui non contano né `backend/.state`, né `backend/.cache`, né la provenienza o "età" del dataset — basta che il file sia presente.
+Vale anche con un dataset preso da un'altra run: basta che il file sia in `infovis/public/data/` prima della build.
 
 ### 2. 📦 Dataset pronto, poi aggiornato via pipeline
 
-Hai un dataset già pronto (dalla release come nel [§1](#1--dataset-pronto-via-veloce), o preso da un'altra run/macchina), ma vuoi aggiornarlo lanciando la pipeline invece di limitarti a `npx ng build`:
-
 ```bash
 cd infovis
-npm run build     # oppure: npm start  (non npx ng build, che salterebbe la pipeline)
+npm run build     # oppure: npm start (non npx ng build, che salterebbe la pipeline)
 ```
 
-Dataset presente, ma `backend/.state`/`.cache` **assenti** (pipeline mai girata qui, qualunque sia l'origine del dataset): nessun rischio di correttezza (niente cache vecchia da servire), ma il ricontrollo dei draft (vedi [§3](#3--aggiornamento-normale-uso-quotidiano)) parte da zero su tutto lo storico invece che sui soli draft già tracciati — qualche minuto in più rispetto al caso normale, non ore. Da qui in poi, con `.state`/`.cache` creati, i run successivi si comportano come il §3.
-
-📄 Numeri e dettagli → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#11-casi-senza-rischi--aggiornamento-normale-e-dataset-pronto-poi-aggiornato).
+Senza `backend/.state`/`.cache` locali, il ricontrollo dei draft (§3) parte dall'intero storico invece che dai soli draft tracciati: circa 35.000 Internet-Draft su Datatracker, paginazione a 50 elementi per pagina → circa 700 pagine da scorrere — qualche minuto extra rispetto al caso normale, considerando la latenza delle richieste di rete, non ore. Dettagli → [guida operativa](docs/guida-operativa-backend.md#11-casi-senza-rischi--aggiornamento-normale-e-dataset-pronto-poi-aggiornato).
 
 ### 3. 🔁 Aggiornamento normale (uso quotidiano)
-
-Il caso più comune dopo il primo setup: dataset e `backend/.state` già presenti e coerenti. Rilancia senza cancellare nulla:
 
 ```bash
 cd infovis
 npm run build     # oppure: npm start
 ```
 
-Gli RFC già risolti vengono saltati guardando il dataset esistente, e `last_draft_fetch_iso` limita a ciò che è nuovo dall'ultimo run — ma **non è tutto**: a ogni run, ogni draft attivo/scaduto già nel dataset viene comunque ririnterrogato per accorgersi se è diventato RFC o è stato abbandonato. Il tempo cresce quindi con **quanti draft attivi sono già tracciati**, non solo con le novità — non è un'operazione a costo fisso di pochi minuti.
+Gli RFC già risolti vengono saltati; i draft attivi/scaduti già nel dataset vengono invece sempre ririnterrogati uno per uno (per accorgersi se sono diventati RFC o sono stati abbandonati) — il tempo cresce quindi con quanti draft attivi sono già tracciati, non solo con le novità.
 
-Vale, senza alcuna azione aggiuntiva, anche se il dataset è stato sostituito con uno **più recente** (es. release nuova sopra un dataset locale più vecchio): è l'opposto del §5, quindi nessun buco possibile — meccanismo completo → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#11a-aggiornamento-normale--dataset-e-state-locali-coerenti).
+Vale anche se il dataset è stato sostituito con uno **più recente**: nessun rischio, è l'opposto del §5. Dettagli → [guida operativa](docs/guida-operativa-backend.md#11a-aggiornamento-normale--dataset-e-state-locali-coerenti).
 
 ### 4. 🐢 Pipeline dati (repository nuovo o dataset assente)
 
@@ -115,16 +102,14 @@ npm install
 npm run build     # oppure: npm start
 ```
 
-`update_dataset.sh` rileva l'assenza del dataset e lo rigenera prima della build: risolve ~44.000 documenti via API Datatracker, soggetta a rate limiting → **ore**, sia a repository appena clonato sia se `backend/.state` esiste già da run precedenti (l'assenza del solo file dataset non velocizza nulla: vedi [§5](#5--stato-disallineato-dataset-assente-o-sostituito)).
-
-📄 Dettagli e comandi manuali dei singoli script → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente).
+`update_dataset.sh` rigenera il dataset da zero: risolve tutti i documenti via API Datatracker, soggetta a rate limiting → **ore**, anche se `backend/.state` esiste già da run precedenti (vedi [§5](#5--stato-disallineato-dataset-assente-o-sostituito)). Dettagli → [guida operativa §9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente).
 
 ### 5. 🔄 Stato disallineato (dataset assente o sostituito)
 
-Stessa soluzione per due situazioni distinte, entrambe con `backend/.state` non coerente col dataset da ottenere: **dataset cancellato ma stato rimasto** (output mancante → RFC rielaborati tutti, draft incompleti) o **dataset sostituito con uno più vecchio** (stesso problema sui draft).
+`backend/.state` non coerente col dataset da ottenere — dataset cancellato con stato rimasto, o sostituito con uno più vecchio: in entrambi i casi i draft risultano **incompleti**, perché lo stato ricorda solo la data dell'ultimo fetch.
 
 > [!WARNING]
-> Cancellare solo `backend/.state/` **non basta**: la query "tutti i draft" risultante è identica a una già eseguita in passato, e la cache HTTP in `backend/.cache/datatracker/` (che non scade mai) la serve stantia invece di richiederla di nuovo — senza errori né avvisi. Va cancellata **anche** quella cache. Vale solo per questi due scenari, non per un aggiornamento normale né per un vero primo run ([§9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente)).
+> Cancellare solo `backend/.state/` **non basta**: la cache HTTP in `backend/.cache/datatracker/` non scade mai e servirebbe una risposta vecchia senza errori né avvisi. Va cancellata anche quella — comandi sempre **dentro `backend/`**, mai da altre cartelle:
 
 ```bash
 cd backend
@@ -133,13 +118,13 @@ cd ../infovis
 npm run build     # oppure: npm start
 ```
 
-📄 Perché succede, con log ed evidenze reali → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#10-stato-disallineato--dataset-assente-o-sostituito-con-uno-più-vecchio).
+Dettagli, log ed evidenze → [guida operativa §10](docs/guida-operativa-backend.md#10-stato-disallineato--dataset-assente-o-sostituito-con-uno-più-vecchio).
 
 ---
 
 ## 🏗️ Architettura
 
-Il progetto è diviso in due componenti indipendenti, collegate da un solo contratto: il file statico `graph_data_enriched.json`.
+Due componenti indipendenti, collegate da un solo contratto: il file statico `graph_data_enriched.json`.
 
 ```
 ┌─────────────────────┐         ┌──────────────────────────┐
@@ -162,9 +147,9 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 └─────────────────────┘         └──────────────────────────┘
 ```
 
-- **Python** è usato solo lato backend, come pipeline batch/offline: produce `graph_data_enriched.json` combinando due fonti autorevoli (l'indice ufficiale RFC e l'API IETF Datatracker), poi completato da un secondo script che risolve i campi ancora mancanti sui soli documenti draft/aborted.
-- **Angular** è il framework scelto per il frontend per la sua gestione nativa di stato reattivo (Signals) e componenti standalone, che si adatta bene alla separazione netta tra "chi decide cosa mostrare" (i due data service) e "chi disegna" (i due componenti di visualizzazione). Il frontend è diviso in due viste indipendenti, scelte da un menu iniziale: il grafo 3D dei soli RFC pubblicati, e una timeline separata per gli Internet-Draft attivi/scaduti/abortiti.
-- **D3.js** non viene usato per il rendering DOM/SVG (che con migliaia di elementi degraderebbe le prestazioni), ma solo per due sotto-sistemi: il motore di **force simulation** nella vista a grafo 3D, e la gestione di **zoom/pan** su `<canvas>` in entrambe le viste. Il disegno effettivo avviene su `<canvas>`/WebGL, pilotato dai dati che D3 aggiorna ad ogni tick della simulazione o ad ogni interazione.
+- **Python** solo lato backend, pipeline batch/offline: produce `graph_data_enriched.json` da due fonti autorevoli (indice RFC + API Datatracker), completato da un secondo script che risolve i campi mancanti sui soli draft/aborted.
+- **Angular** per il frontend, grazie a Signals e componenti standalone: due viste indipendenti, scelte da un menu iniziale — grafo 3D degli RFC pubblicati e timeline separata per gli Internet-Draft.
+- **D3.js** non per il rendering DOM/SVG (degraderebbe con migliaia di elementi), ma solo per la **force simulation** del grafo e per **zoom/pan** su `<canvas>` in entrambe le viste. Il disegno avviene su `<canvas>`/WebGL.
 
 ---
 
@@ -173,70 +158,53 @@ Il progetto è diviso in due componenti indipendenti, collegate da un solo contr
 ```
 RFC-graph-visualizer/
 ├── backend/
-│   ├── draft_metadata_enricher.py    # 2° passaggio, solo su nodi draft/aborted: url deterministico, year via Datatracker, normalizzazione abstract
-│   ├── purge_phantom_draft_nodes.py  # Rimuove "nodi fantasma" con is_draft e is_aborted entrambi nulli
-│   ├── repair_draft_state.py         # Pulizia dello stato che sblocca i draft falliti per errori di rete, per ritentarli
-│   ├── rfc_pipeline.py               # Pipeline dati principale: parsing rfc-index.xml + arricchimento via IETF Datatracker (sotto-comandi: parse, enrich, all)
-│   ├── sample_rfc_index.xml          # Indice RFC ridotto, per test rapidi della fase `parse` (--offline, nessuna rete)
-│   └── update_dataset.sh             # Orchestratore: lancia "rfc_pipeline.py all" + draft_metadata_enricher.py; richiamato dagli hook npm prestart/prebuild
+│   ├── draft_metadata_enricher.py    # 2° passaggio, solo draft/aborted: url, year, abstract
+│   ├── purge_phantom_draft_nodes.py  # Rimuove nodi "fantasma" (is_draft e is_aborted entrambi nulli)
+│   ├── repair_draft_state.py         # Sblocca i draft falliti per errori di rete, per ritentarli
+│   ├── rfc_pipeline.py               # Pipeline principale: parse + enrich
+│   ├── sample_rfc_index.xml          # Indice ridotto, per test rapidi offline
+│   └── update_dataset.sh             # Orchestratore: rfc_pipeline.py all + draft_metadata_enricher.py
 │
 ├── docs/
 │   ├── Progetto_Infovis/
-│   │   ├── img/                                         # Screenshot referenziati dalla relazione e da questo README
-│   │   └── Relazione_Progetto_RFC-Graph-Visualizer.md   # Relazione di progetto completa (problema, dati, design, risultati, sviluppi futuri)
-│   └── guida-operativa-backend.md    # Comandi per clonare il repo, testare i singoli script backend, rigenerare il dataset, avviare il frontend
+│   │   ├── img/                                         # Screenshot
+│   │   └── Relazione_Progetto_RFC-Graph-Visualizer.md   # Relazione di progetto completa
+│   └── guida-operativa-backend.md    # Comandi per script backend, dataset, frontend
 │
 ├── infovis/                          # Frontend Angular standalone
-│   ├── public/
-│   │   └── favicon.ico
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── components/
-│   │   │   │   ├── draft-timeline/   # Istogramma temporale per draft/aborted (canvas 2D + d3-zoom)
-│   │   │   │   ├── graph-canvas/     # Grafo 3D degli RFC pubblicati (D3 + force simulation)
-│   │   │   │   └── landing-menu/     # Menu iniziale: scelta tra le due viste
-│   │   │   ├── models/
-│   │   │   │   └── graph.model.ts    # Interfacce dati condivise (nodi, archi, tipi RFC)
-│   │   │   ├── services/
-│   │   │   │   ├── draft-timeline-data.service.ts   # Dati per la vista timeline (solo draft/aborted)
-│   │   │   │   └── graph-data.service.ts            # Dati per la vista a grafo (solo RFC pubblicati)
-│   │   │   └── app.config.ts / app.html / app.scss / app.ts
-│   │   ├── index.html
-│   │   ├── main.ts
-│   │   └── styles.scss
-│   ├── angular.json
-│   ├── package-lock.json
-│   ├── package.json
-│   └── tsconfig.app.json / tsconfig.json / tsconfig.spec.json
+│   ├── public/favicon.ico
+│   ├── src/app/
+│   │   ├── components/
+│   │   │   ├── draft-timeline/       # Istogramma draft/aborted (canvas 2D + d3-zoom)
+│   │   │   ├── graph-canvas/         # Grafo 3D degli RFC (D3 + force simulation)
+│   │   │   └── landing-menu/         # Menu iniziale: scelta tra le due viste
+│   │   ├── models/graph.model.ts     # Interfacce dati condivise
+│   │   ├── services/
+│   │   │   ├── draft-timeline-data.service.ts
+│   │   │   └── graph-data.service.ts
+│   │   └── app.config.ts / app.html / app.scss / app.ts
+│   ├── angular.json / package.json / tsconfig*.json
 │
-├── .gitignore                        # Esclude cache/stato pipeline, output JSON generati, ambiente Python, Angular
-├── README.md                         # Questo file
-└── requirements.txt                  # Dipendenze Python (nessuna esterna: solo libreria standard)
+├── .gitignore
+├── README.md
+└── requirements.txt                  # Nessuna dipendenza esterna: solo libreria standard Python
 ```
 
 ---
 
 ## 🧩 Componenti principali del backend
 
-I tre script sono pensati per girare in sequenza (è quello che fa `update_dataset.sh`, vedi [guida operativa §6](docs/guida-operativa-backend.md#6-update_datasetsh--lorchestratore-automatico)):
+**`rfc_pipeline.py`** — due fasi: `parse` (indice RFC → nodi/archi Updates/Obsoletes, `impact_score` via PageRank pesato) ed `enrich` (layer di rete e working group via IETF Datatracker, più recupero degli Internet-Draft).
 
-### `backend/rfc_pipeline.py`
+**`draft_metadata_enricher.py`** — secondo passaggio, solo su nodi draft/aborted già presenti: `url` (deterministico), `year` (via Datatracker), `abstract` (normalizzato su tutti i nodi). Va lanciato dopo un `enrich` completo.
 
-Due fasi, eseguibili separatamente o in sequenza (`parse` poi `enrich`, o `all`). `parse` costruisce il grafo delle relazioni Updates/Obsoletes a partire da `rfc-index.xml` e calcola l'`impact_score` (PageRank pesato). `enrich` risolve layer di rete e working group via IETF Datatracker e recupera gli Internet-Draft. Entrambe le fasi sono incrementali: stato persistito su disco, cache HTTP, checkpoint periodici, retry con backoff — dettagli e comandi → [guida operativa §1-§2](docs/guida-operativa-backend.md#1-fase-parse--indice-reale-completo).
-
-### `backend/draft_metadata_enricher.py`
-
-Secondo passaggio, **solo** sui nodi draft/aborted: completa `url` (deterministico, nessuna chiamata di rete), `year` (via Datatracker) e `abstract` (normalizzato su tutto il dataset). Va lanciato dopo un `enrich` completo (senza `--skip-drafts`); stesso paradigma incrementale del primo script — dettagli → [guida operativa §5](docs/guida-operativa-backend.md#5-fase-draft_metadata_enricherpy--secondo-passaggio-solo-draftaborted).
-
-### `backend/purge_phantom_draft_nodes.py`
-
-Terzo e ultimo passaggio: rimuove eventuali "nodi fantasma" (`is_draft` e `is_aborted` entrambi nulli). Nell'uso normale non trova nulla da rimuovere: è una rete di sicurezza silenziosa più che un passaggio che modifica il dataset a ogni run.
+**`purge_phantom_draft_nodes.py`** — rete di sicurezza finale, eseguita da `update_dataset.sh`: rimuove eventuali nodi senza `is_draft`/`is_aborted` risolti. Nell'uso normale non trova nulla da fare.
 
 ---
 
 ## 📘 Relazione di progetto
 
-Lo sviluppo del sistema — problema affrontato, modello dei dati, principi di visualizzazione applicati, scelte di design (force simulation, clustering per community, filtri, codifica visiva), criticità risolte durante lo sviluppo, risultati e sviluppi futuri — è documentato per intero nella relazione di progetto:
+Problema, modello dei dati, principi di visualizzazione applicati, scelte di design, criticità risolte, risultati e sviluppi futuri:
 
 - 📄 [`docs/Progetto_Infovis/Relazione_Progetto_RFC-Graph-Visualizer.md`](docs/Progetto_Infovis/Relazione_Progetto_RFC-Graph-Visualizer.md)
 
@@ -244,13 +212,12 @@ Lo sviluppo del sistema — problema affrontato, modello dei dati, principi di v
 
 ## 📚 Riferimenti
 
-- **RFC Editor** — [rfc-editor.org](https://www.rfc-editor.org/), fonte dell'indice ufficiale `rfc-index.xml` usato in fase di parsing.
-- **IETF Datatracker** — [datatracker.ietf.org](https://datatracker.ietf.org/), fonte autorevole per layer di rete, working group, Internet-Draft e per la data di ultima revisione dei draft; API pubblica documentata su [datatracker.ietf.org/api/v1](https://datatracker.ietf.org/api/v1/).
-- **IETF** — [ietf.org](https://www.ietf.org/), organizzazione responsabile dello sviluppo degli standard Internet documentati come RFC.
-- **Brin, S., Page, L. (1998)** — [The Anatomy of a Large-Scale Hypertextual Web Search Engine (Archived)](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html), paper di riferimento per l'algoritmo PageRank originale, adattato come variante pesata per il calcolo dell'`impact_score` dei nodi RFC.
-- **Raghavan, U.N., Albert, R., Kumara, S. (2007)** — [Near linear time algorithm to detect community structures in large-scale networks](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.76.036106), Phys. Rev. E 76, 036106, paper di riferimento per il Label Propagation Algorithm (LPA) usato per il clustering spaziale dei nodi.
-- **D3.js** — [d3js.org](https://d3js.org/), libreria usata nel frontend per la force simulation 3D e la gestione di zoom/pan.
-- **Angular** — [angular.dev](https://angular.dev/), framework usato per il frontend.
+- **RFC Editor** — [rfc-editor.org](https://www.rfc-editor.org/), fonte dell'indice `rfc-index.xml`.
+- **IETF Datatracker** — [datatracker.ietf.org](https://datatracker.ietf.org/), fonte per layer, working group, Internet-Draft ([API](https://datatracker.ietf.org/api/v1/)).
+- **IETF** — [ietf.org](https://www.ietf.org/), organizzazione responsabile degli standard RFC.
+- **Brin, S., Page, L. (1998)** — [The Anatomy of a Large-Scale Hypertextual Web Search Engine](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html), base dell'`impact_score`.
+- **Raghavan, U.N., Albert, R., Kumara, S. (2007)** — [Near linear time algorithm to detect community structures](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.76.036106), Phys. Rev. E 76, 036106 — LPA per il clustering spaziale.
+- **D3.js** — [d3js.org](https://d3js.org/) · **Angular** — [angular.dev](https://angular.dev/)
 
 ---
 
