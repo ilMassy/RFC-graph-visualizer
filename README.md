@@ -118,7 +118,7 @@ cd ../infovis
 npm run build     # oppure: npm start
 ```
 
-Dettagli, log ed evidenze → [guida operativa §10](docs/guida-operativa-backend.md#10-stato-disallineato).
+Dettagli → [guida operativa §10](docs/guida-operativa-backend.md#10-stato-disallineato).
 
 ---
 
