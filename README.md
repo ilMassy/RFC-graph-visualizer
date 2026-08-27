@@ -73,8 +73,6 @@ npx ng build       # oppure: npx ng serve
 
 Vale anche con un dataset preso da un'altra run: basta che il file sia in `infovis/public/data/` prima della build.
 
-`npx ng build`/`npx ng serve` saltano la pipeline (§2–§5): a differenza di tutti gli altri casi, qui non contano né `backend/.state`, né `backend/.cache`, né la provenienza o "età" del dataset — basta che il file sia presente.
-
 ### 2. 📦 Dataset pronto, poi aggiornato via pipeline
 
 ```bash
