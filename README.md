@@ -217,7 +217,8 @@ Problema, modello dei dati, principi di visualizzazione applicati, scelte di des
 - **IETF** — [ietf.org](https://www.ietf.org/), organizzazione responsabile degli standard RFC.
 - **Brin, S., Page, L. (1998)** — [The Anatomy of a Large-Scale Hypertextual Web Search Engine](https://web.archive.org/web/20230606095552/http://infolab.stanford.edu/~backrub/google.html), base dell'`impact_score`.
 - **Raghavan, U.N., Albert, R., Kumara, S. (2007)** — [Near linear time algorithm to detect community structures](https://journals.aps.org/pre/abstract/10.1103/PhysRevE.76.036106), Phys. Rev. E 76, 036106 — LPA per il clustering spaziale.
-- **D3.js** — [d3js.org](https://d3js.org/) · **Angular** — [angular.dev](https://angular.dev/)
+- **D3.js** — [d3js.org](https://d3js.org/) ·
+- **Angular** — [angular.dev](https://angular.dev/)
 
 ---
 
