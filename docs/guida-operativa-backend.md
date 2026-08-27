@@ -244,7 +244,7 @@ In alternativa, `npm start`/`npx ng serve` avvia un server di sviluppo con live 
 ## 8. Pulizia tra un test e l'altro
 
 > [!WARNING]
-> Rilancia solo dopo un run **concluso per intero**. Stato/output/cache di `rfc_pipeline.py` non sono scritti atomicamente. In quel caso, **dentro `backend/`**: `rm -rf .state/ .cache/datatracker/`.
+> Riavviare la pipeline solo dopo un'esecuzione completata per intero. Lo stato, l'output e la cache di `rfc_pipeline.py` non vengono scritti in modo atomico: in caso di interruzione, ripulire la directory `backend/` eseguendo `rm -rf .state/ .cache/datatracker/`.
 
 Reset completo di `rfc_pipeline.py` (la prossima `enrich` rifà tutte le chiamate a Datatracker):
 
