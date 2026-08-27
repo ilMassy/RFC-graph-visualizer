@@ -183,7 +183,7 @@ RFC-graph-visualizer/
 │   │   │   ├── draft-timeline-data.service.ts
 │   │   │   └── graph-data.service.ts
 │   │   └── app.config.ts / app.html / app.scss / app.ts
-│   ├── angular.json / package.json / tsconfig*.json
+│   └── angular.json / package.json / tsconfig*.json
 │
 ├── .gitignore
 ├── README.md
