@@ -70,7 +70,7 @@ unzip graph_data_enriched.zip -d infovis/public/data/
 
 cd infovis
 npm install       
-npx ng build
+npx ng build       # oppure: npx ng serve
 ```
 
 Vale anche con un dataset già pronto da un'altra run (non dalla release): copialo in `infovis/public/data/` se non è già lì, prima di `npx ng build`.
