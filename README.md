@@ -42,7 +42,7 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 > [!IMPORTANT]
 > Il file `graph_data_enriched.json` non è versionato nel repository. Gli script `npm start` e `npm run build` (tramite gli hook dedicati) eseguono automaticamente la pipeline Python per rigenerarlo; se si utilizzano direttamente i comandi Angular (`npx ng serve` / `npx ng build`), il sistema utilizzerà il file eventualmente già presente sul disco.
 >
-> `graph_data.json` è solo output intermedio della fase `parse` (§1 guida operativa): se lo tieni in giro, deve essere della stessa run di `graph_data_enriched.json`, altrimenti dati vecchi restano congelati senza errori né avvisi. Nel dubbio, non tenerlo — viene rigenerato da solo.
+> `graph_data.json` è solo output intermedio della fase `parse` ([guida operativa §1](docs/guida-operativa-backend.md#1-fase-parse)): se lo tieni in giro, deve essere della stessa run di `graph_data_enriched.json`, altrimenti dati vecchi restano congelati senza errori né avvisi. Nel dubbio, non tenerlo — viene rigenerato da solo.
 
 > [!WARNING]
 > Rilancia solo dopo un run precedente concluso per intero (non un `kill -9` o un crash). In caso contrario, prima di rilanciare — **sempre dentro `backend/`**: `rm -rf .state/ .cache/datatracker/` — dettagli → [guida operativa §8](docs/guida-operativa-backend.md#8-pulizia-tra-un-test-e-laltro).
@@ -80,7 +80,7 @@ cd infovis
 npm run build     # oppure: npm start (non npx ng build, che salterebbe la pipeline)
 ```
 
-Senza `backend/.state`/`.cache` locali, il ricontrollo dei draft (§3) parte dall'intero storico invece che dai soli draft tracciati: circa 35.000 Internet-Draft su Datatracker, paginazione a 50 elementi per pagina → circa 700 pagine da scorrere — qualche minuto extra rispetto al caso normale, considerando la latenza delle richieste di rete, non ore. Dettagli → [guida operativa](docs/guida-operativa-backend.md#11-casi-senza-rischi--aggiornamento-normale-e-dataset-pronto-poi-aggiornato).
+Senza `backend/.state`/`.cache` locali, il ricontrollo dei draft (§3) parte dall'intero storico invece che dai soli draft tracciati: circa 35.000 Internet-Draft su Datatracker, paginazione a 50 elementi per pagina → circa 700 pagine da scorrere — qualche minuto extra rispetto al caso normale, considerando la latenza delle richieste di rete, non ore. Dettagli → [guida operativa](docs/guida-operativa-backend.md#11-casi-senza-rischi).
 
 ### 3. 🔁 Aggiornamento normale (uso quotidiano)
 
@@ -91,7 +91,7 @@ npm run build     # oppure: npm start
 
 Gli RFC già risolti vengono saltati; i draft attivi/scaduti già nel dataset vengono invece sempre ririnterrogati uno per uno (per accorgersi se sono diventati RFC o sono stati abbandonati) — il tempo cresce quindi con quanti draft attivi sono già tracciati, non solo con le novità.
 
-Vale anche se il dataset è stato sostituito con uno **più recente**: nessun rischio, è l'opposto del §5. Dettagli → [guida operativa](docs/guida-operativa-backend.md#11a-aggiornamento-normale--dataset-e-state-locali-coerenti).
+Vale anche se il dataset è stato sostituito con uno **più recente**: nessun rischio, è l'opposto del §5. Dettagli → [guida operativa](docs/guida-operativa-backend.md#11a-aggiornamento-normale).
 
 ### 4. 🐢 Pipeline dati (repository nuovo o dataset assente)
 
