@@ -102,7 +102,7 @@ npm install
 npm run build     # oppure: npm start
 ```
 
-`update_dataset.sh` rigenera il dataset da zero: risolve tutti i documenti via API Datatracker, soggetta a rate limiting → **ore**, anche se `backend/.state` esiste già da run precedenti (vedi [§5](#5--stato-disallineato-dataset-assente-o-sostituito)). Dettagli → [guida operativa §9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente).
+`update_dataset.sh` rigenera il dataset da zero: risolve tutti i documenti via API Datatracker, soggetta a rate limiting → **ore**, anche se `backend/.state` esiste già da run precedenti (vedi [§5](#5--stato-disallineato-dataset-assente-o-sostituito)). Dettagli → [guida operativa §9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero).
 
 ### 5. 🔄 Stato disallineato (dataset assente o sostituito)
 
