@@ -49,6 +49,9 @@ Il sistema è pensato per due profili distinti, a cui rispondono le due viste de
 >
 > `graph_data.json` è solo output intermedio: se lo tieni, deve essere della stessa run di `graph_data_enriched.json` (altrimenti dati vecchi restano congelati senza errori). Se hai dubbi, non tenerlo: verrà rigenerato da solo.
 
+> [!WARNING]
+> Rilancia solo a run precedente concluso per intero. Se un run è stato interrotto **a forza** (kill -9, terminale chiuso, crash — non `Ctrl+C`), stato/output/cache di `rfc_pipeline.py` possono risultare corrotti (scrittura non atomica): cancella `backend/.state/ backend/.cache/datatracker/` prima di rilanciare — dettagli → [guida operativa §8](docs/guida-operativa-backend.md#8-pulizia-tra-un-test-e-laltro).
+
 | Situazione | Comando | Tempo |
 |---|---|---|
 | Voglio partire subito, non mi serve il dataset più recente | [§1](#1--dataset-pronto-via-veloce) — scarica la release + `npx ng build` | pochi minuti |

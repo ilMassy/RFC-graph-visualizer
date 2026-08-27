@@ -281,6 +281,9 @@ In alternativa, `npm start` (o `npx ng serve` per saltare l'hook `prestart`) avv
 
 ## 8. Pulizia tra un test e l'altro
 
+> [!WARNING]
+> Rilancia solo a run precedente **concluso per intero**. Un'interruzione "pulita" (`Ctrl+C`, gestita con checkpoint) è sicura; una **a forza** (kill -9, terminale chiuso, crash) no: stato/output/cache di `rfc_pipeline.py` non sono scritti in modo atomico e possono restare corrotti a metà scrittura. In quel caso, prima di rilanciare: `rm -rf .state/ .cache/datatracker/`. `draft_metadata_enricher.py` scrive già in modo atomico (stato, output, `.cache/datatracker_docdetail`): non serve pulirlo per questo motivo.
+
 Rimuove stato e cache di `rfc_pipeline.py` per ripartire completamente da zero (usare con cautela: la prossima `enrich` rifà tutte le chiamate a Datatracker):
 
 ```bash
