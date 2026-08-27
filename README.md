@@ -40,7 +40,7 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 ## 🚀 Come iniziare
 
 > [!IMPORTANT]
-> `graph_data_enriched.json` non è versionato: `npm run build`/`npm start` lo generano in automatico; `npx ng build`/`npx ng serve` lo saltano e usano quello presente.
+> Il file `graph_data_enriched.json` non è versionato nel repository. Gli script `npm start` e `npm run build` (tramite gli hook dedicati) eseguono automaticamente la pipeline Python per rigenerarlo; se si utilizzano direttamente i comandi Angular (`npx ng serve` / `npx ng build`), il sistema utilizzerà il file eventualmente già presente sul disco.
 >
 > `graph_data.json` è solo output intermedio della fase `parse` (§1 guida operativa): se lo tieni in giro, deve essere della stessa run di `graph_data_enriched.json`, altrimenti dati vecchi restano congelati senza errori né avvisi. Nel dubbio, non tenerlo — viene rigenerato da solo.
 
