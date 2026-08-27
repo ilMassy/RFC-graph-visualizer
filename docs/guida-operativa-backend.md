@@ -60,6 +60,9 @@ python rfc_pipeline.py parse rfc-index.xml -o output/graph_data.json --force
 ## 2. Fase `enrich` — arricchimento via Datatracker
 
 > [!WARNING]
+> `enrich` salta ogni ID già presente in `--output`: se `graph_data.json` (`--input`) non è della stessa run di un `graph_data_enriched.json` preesistente, gli ID in comune restano ai vecchi valori (title/status/year/impact_score) invece di aggiornarsi — nessun errore, nessun avviso. Regola pratica: tieni i due file allineati (stessa run), oppure elimina `graph_data_enriched.json` prima di rilanciare se vuoi un ri-arricchimento completo (richiede però di rifare tutto da zero, §9).
+
+> [!WARNING]
 > Interroga l'API pubblica di Datatracker: con il dataset reale (~10.000 RFC) ci vuole tempo per via del rate limiting (0.5s per richiesta). Per un primo test, usa `--skip-drafts` per saltare il fetch dei 34.000+ Internet-Draft e limitarti solo agli RFC pubblicati.
 
 ```bash

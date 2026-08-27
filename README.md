@@ -46,6 +46,8 @@ Il sistema è pensato per due profili distinti, a cui rispondono le due viste de
 
 > [!IMPORTANT]
 > Il dataset (`graph_data_enriched.json`) **non è versionato** (è nel `.gitignore`): va scaricato o generato. `npm run build` / `npm start` rigenerano sempre il dataset in automatico (hook `prebuild`/`prestart`, script `backend/update_dataset.sh`); `npx ng build` / `npx ng serve` lo saltano e usano il dataset così com'è.
+>
+> `graph_data.json` è solo output intermedio: se lo tieni, deve essere della stessa run di `graph_data_enriched.json` (altrimenti dati vecchi restano congelati senza errori). Se hai dubbi, non tenerlo: verrà rigenerato da solo.
 
 | Situazione | Comando | Tempo |
 |---|---|---|
