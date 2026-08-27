@@ -89,9 +89,9 @@ cd infovis
 npm run build     # oppure: npm start  (non npx ng build, che salterebbe la pipeline)
 ```
 
-Dataset presente, ma `backend/.state`/`.cache` **assenti** (pipeline mai girata qui, qualunque sia l'origine del dataset): nessun rischio di correttezza (niente cache vecchia da servire), ma il ricontrollo dei draft (vedi [§3](#3--aggiornamento-normale-uso-quotidiano)) parte da zero su tutto lo storico invece che sui soli draft già tracciati — considerando la presenza di circa 35.000 Internet-Draft all'interno del Datatracker e una paginazione impostata a 50 elementi per pagina, la pipeline processerà complessivamente circa 700 pagine; il tempo di esecuzione aggiuntivo stimato rispetto al caso normale si attesta nell'ordine di qualche minuto, dipendendo principalmente dalla latenza e dal throttling delle richieste di rete. Da qui in poi, con `.state`/`.cache` creati, i run successivi si comportano come il §3.
+Dataset presente, ma `backend/.state`/`.cache` **assenti** (pipeline mai girata qui, qualunque sia l'origine del dataset): nessun rischio di correttezza (niente cache vecchia da servire), ma il ricontrollo dei draft (vedi [§3](#3--aggiornamento-normale-uso-quotidiano)) parte da zero su tutto lo storico invece che sui soli draft già tracciati — qualche minuto in più rispetto al caso normale, non ore. Da qui in poi, con `.state`/`.cache` creati, i run successivi si comportano come il §3.
 
-📄 Dettagli → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#11-casi-senza-rischi--aggiornamento-normale-e-dataset-pronto-poi-aggiornato).
+📄 Numeri e dettagli → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#11-casi-senza-rischi--aggiornamento-normale-e-dataset-pronto-poi-aggiornato).
 
 ### 3. 🔁 Aggiornamento normale (uso quotidiano)
 
@@ -102,9 +102,9 @@ cd infovis
 npm run build     # oppure: npm start
 ```
 
-Gli RFC già risolti vengono saltati guardando il dataset esistente, e `last_draft_fetch_iso` limita a ciò che è nuovo dall'ultimo run — ma **non è tutto**: a ogni run, ogni draft attivo/scaduto già nel dataset viene comunque ririnterrogato su Datatracker uno per uno, ignorando la cache (per accorgersi se è diventato RFC o è stato abbandonato). Il tempo cresce quindi con **quanti draft attivi sono già tracciati**, non solo con le novità — non è un'operazione a costo fisso di pochi minuti.
+Gli RFC già risolti vengono saltati guardando il dataset esistente, e `last_draft_fetch_iso` limita a ciò che è nuovo dall'ultimo run — ma **non è tutto**: a ogni run, ogni draft attivo/scaduto già nel dataset viene comunque ririnterrogato per accorgersi se è diventato RFC o è stato abbandonato. Il tempo cresce quindi con **quanti draft attivi sono già tracciati**, non solo con le novità — non è un'operazione a costo fisso di pochi minuti.
 
-Vale, senza alcuna azione aggiuntiva, anche se il dataset è stato sostituito con uno **più recente** (es. release nuova sopra un dataset locale più vecchio): è l'opposto del §5, quindi nessun buco possibile — dettagli → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#11a-aggiornamento-normale--dataset-e-state-locali-coerenti).
+Vale, senza alcuna azione aggiuntiva, anche se il dataset è stato sostituito con uno **più recente** (es. release nuova sopra un dataset locale più vecchio): è l'opposto del §5, quindi nessun buco possibile — meccanismo completo → [`docs/guida-operativa-backend.md`](docs/guida-operativa-backend.md#11a-aggiornamento-normale--dataset-e-state-locali-coerenti).
 
 ### 4. 🐢 Pipeline dati (repository nuovo o dataset assente)
 
@@ -121,13 +121,10 @@ npm run build     # oppure: npm start
 
 ### 5. 🔄 Stato disallineato (dataset assente o sostituito)
 
-Stessa soluzione per due situazioni distinte, entrambe con `backend/.state` non coerente col dataset da ottenere:
-
-- **dataset cancellato ma stato rimasto** (es. ripulita solo `infovis/public/data/`): comunque **ore** per gli RFC (output mancante → rielaborati tutti) e dataset **incompleto sui draft**, perché lo stato ricorda solo la data dell'ultimo fetch e Datatracker restituisce quindi pochi draft, non l'intero storico (~34.000+);
-- **dataset sostituito con uno più vecchio** (backup, release precedente): stesso problema sui draft, stesso motivo.
+Stessa soluzione per due situazioni distinte, entrambe con `backend/.state` non coerente col dataset da ottenere: **dataset cancellato ma stato rimasto** (output mancante → RFC rielaborati tutti, draft incompleti) o **dataset sostituito con uno più vecchio** (stesso problema sui draft).
 
 > [!WARNING]
-> Cancellare solo `backend/.state/` **non basta**. Azzera la data dell'ultimo fetch, ma la query "tutti i draft" risultante è identica a una già eseguita in passato — e la risposta è ancora su disco in `backend/.cache/datatracker/`, che non scade mai. I draft finiscono letti dalla cache vecchia invece che richiesti di nuovo, senza errori né avvisi. Va cancellata **anche** quella cache — vale solo per questi due scenari, non per un aggiornamento normale né per un vero primo run ([§9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente)).
+> Cancellare solo `backend/.state/` **non basta**: la query "tutti i draft" risultante è identica a una già eseguita in passato, e la cache HTTP in `backend/.cache/datatracker/` (che non scade mai) la serve stantia invece di richiederla di nuovo — senza errori né avvisi. Va cancellata **anche** quella cache. Vale solo per questi due scenari, non per un aggiornamento normale né per un vero primo run ([§9](docs/guida-operativa-backend.md#9-rigenerare-il-dataset-da-zero--dataset-assente)).
 
 ```bash
 cd backend
@@ -221,26 +218,19 @@ RFC-graph-visualizer/
 
 ## 🧩 Componenti principali del backend
 
+I tre script sono pensati per girare in sequenza (è quello che fa `update_dataset.sh`, vedi [guida operativa §6](docs/guida-operativa-backend.md#6-update_datasetsh--lorchestratore-automatico)):
+
 ### `backend/rfc_pipeline.py`
 
-Script Python unico con due fasi, eseguibili separatamente o in sequenza:
-
-1. **`parse`** — scarica `rfc-index.xml` da rfc-editor.org (fetch condizionale via ETag/Last-Modified), fa il parsing di tutte le entry RFC, costruisce il grafo delle relazioni Updates/Obsoletes (con rilevamento e rimozione di eventuali contraddizioni), calcola un punteggio di autorevolezza (`impact_score`) tramite un PageRank pesato.
-2. **`enrich`** — arricchisce ogni nodo con layer di rete e working group autorevoli, risolti tramite l'API pubblica di IETF Datatracker; recupera anche gli Internet-Draft (attivi, scaduti, morti, sostituiti).
+Due fasi, eseguibili separatamente o in sequenza (`parse` poi `enrich`, o `all`). `parse` costruisce il grafo delle relazioni Updates/Obsoletes a partire da `rfc-index.xml` e calcola l'`impact_score` (PageRank pesato). `enrich` risolve layer di rete e working group via IETF Datatracker e recupera gli Internet-Draft. Entrambe le fasi sono incrementali: stato persistito su disco, cache HTTP, checkpoint periodici, retry con backoff — dettagli e comandi → [guida operativa §1-§2](docs/guida-operativa-backend.md#1-fase-parse--indice-reale-completo).
 
 ### `backend/draft_metadata_enricher.py`
 
-Secondo passaggio di arricchimento, separato dal primo per tenere distinte le responsabilità: lavora **solo** sui nodi draft/aborted già presenti in `graph_data_enriched.json` e completa i campi che il primo script lascia mancanti su di essi:
-
-- **`url`** — costruito in modo deterministico dal nome del documento, senza chiamate di rete.
-- **`year`** — risolto interrogando Datatracker (campo `time`, anno dell'ultima revisione nota — non la prima submission).
-- **`abstract`** — normalizzato (whitespace collassato, troncamento con ellissi) su tutti i nodi del dataset.
-
-Va lanciato dopo un `enrich` completo (senza `--skip-drafts`). Stesso paradigma incrementale del primo script: stato persistito su disco, cache HTTP (incluse le risposte 404), checkpoint periodici, retry con backoff.
+Secondo passaggio, **solo** sui nodi draft/aborted: completa `url` (deterministico, nessuna chiamata di rete), `year` (via Datatracker) e `abstract` (normalizzato su tutto il dataset). Va lanciato dopo un `enrich` completo (senza `--skip-drafts`); stesso paradigma incrementale del primo script — dettagli → [guida operativa §5](docs/guida-operativa-backend.md#5-fase-draft_metadata_enricherpy--secondo-passaggio-solo-draftaborted).
 
 ### `backend/purge_phantom_draft_nodes.py`
 
-Terzo e ultimo passaggio automatico, eseguito da `update_dataset.sh` dopo `draft_metadata_enricher.py`: rimuove eventuali "nodi fantasma" rimasti nel dataset, cioè nodi con `is_draft` e `is_aborted` entrambi nulli (né RFC pubblicato né draft riconosciuto). Nell'uso normale non trova nulla da rimuovere: è una rete di sicurezza silenziosa più che un passaggio che modifica il dataset a ogni run.
+Terzo e ultimo passaggio: rimuove eventuali "nodi fantasma" (`is_draft` e `is_aborted` entrambi nulli). Nell'uso normale non trova nulla da rimuovere: è una rete di sicurezza silenziosa più che un passaggio che modifica il dataset a ogni run.
 
 ---
 
