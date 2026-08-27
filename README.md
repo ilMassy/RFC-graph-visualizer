@@ -50,10 +50,10 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 | Situazione | Comando | Tempo |
 |---|---|---|
 | Voglio partire subito, senza dataset più recente | [§1](#1--dataset-pronto-via-veloce): scarica la release + `npx ng build` | pochi minuti |
-| Ho un dataset, voglio aggiornarlo con la pipeline | [§2](#2--dataset-pronto-poi-aggiornato-via-pipeline): `npm run build` | qualche ora |
-| Uso quotidiano — dataset e stato già coerenti | [§3](#3--aggiornamento-normale-uso-quotidiano): `npm run build` | minuti–ore, secondo i draft attivi |
+| Ho un dataset, voglio aggiornarlo con la pipeline (primo run su questa macchina) | [§2](#2--dataset-pronto-poi-aggiornato-via-pipeline): `npm run build` | qualche ora |
+| Uso quotidiano — dataset e stato già coerenti (aggiornamento normale) | [§3](#3--aggiornamento-normale-uso-quotidiano): `npm run build` | minuti–ore, secondo i draft attivi |
 | Repository nuovo, nessun dataset | [§4](#4--pipeline-dati-repository-nuovo-o-dataset-assente): `npm install && npm run build` | ore |
-| Dataset assente/sostituito ma stato pregresso presente | [§5](#5--stato-disallineato-dataset-assente-o-sostituito): `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore |
+| Dataset assente/sostituito con uno più vecchio ma stato pregresso presente (aggiornamento) | [§5](#5--stato-disallineato-dataset-assente-o-sostituito): `rm -rf backend/.state/ backend/.cache/datatracker/` poi `npm run build` | ore |
 
 Accesso: `npm start`/`npx ng serve` → URL in console (`http://localhost:4200`); `npm run build`/`npx ng build` → `php -S 127.0.0.1:8888` dentro `dist/infovis/browser/`. Stop: `Ctrl+C`.
 
