@@ -195,6 +195,7 @@ Lanciato dagli hook `prestart`/`prebuild`: non serve invocarlo a mano. Scrive di
 | `(1/4)` | `rfc_pipeline.py all` | Parsing + arricchimento layer/working group + recupero draft (§1–§3). |
 | `(2/4)` | `draft_metadata_enricher.py` | `url`/`year` sui soli draft/aborted (§5). |
 | `(3/4)` | `purge_phantom_draft_nodes.py` | Rimuove nodi "fantasma" residui — di norma non trova nulla. |
+| `(4/4)` | — | Nessuno script: solo il messaggio di fine run (dataset aggiornato in `$DATASET_PATH`). Lo script termina qui; è poi npm, tramite l'hook `prestart`/`prebuild`, a proseguire con `ng serve`/`ng build`. |
 
 > [!NOTE]
 > `(0/4)` controlla solo la **presenza del file** dataset, non lo stato/cache della pipeline (`backend/.state`, `backend/.cache`): i due aspetti sono indipendenti (§9 vs §10).
