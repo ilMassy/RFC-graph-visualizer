@@ -282,7 +282,12 @@ In alternativa, `npm start` (o `npx ng serve` per saltare l'hook `prestart`) avv
 ## 8. Pulizia tra un test e l'altro
 
 > [!WARNING]
-> Rilancia solo a run precedente **concluso per intero**. Un'interruzione "pulita" (`Ctrl+C`, gestita con checkpoint) è sicura; una **a forza** (kill -9, terminale chiuso, crash) no: stato/output/cache di `rfc_pipeline.py` non sono scritti in modo atomico e possono restare corrotti a metà scrittura. In quel caso, prima di rilanciare: `rm -rf .state/ .cache/datatracker/`. `draft_metadata_enricher.py` scrive già in modo atomico (stato, output, `.cache/datatracker_docdetail`): non serve pulirlo per questo motivo.
+> Rilancia solo a run precedente **concluso per intero**. Un'interruzione "pulita" (`Ctrl+C`, gestita con checkpoint) è sicura; una **a forza** (kill -9, terminale chiuso, crash) no: stato/output/cache di `rfc_pipeline.py` non sono scritti in modo atomico e possono restare corrotti a metà scrittura. In quel caso, prima di rilanciare:
+> ```bash
+> cd backend
+> rm -rf .state/ .cache/datatracker/
+> ```
+> `draft_metadata_enricher.py` scrive già in modo atomico (stato, output, `.cache/datatracker_docdetail`): non serve pulirlo per questo motivo.
 
 Rimuove stato e cache di `rfc_pipeline.py` per ripartire completamente da zero (usare con cautela: la prossima `enrich` rifà tutte le chiamate a Datatracker):
 
@@ -371,11 +376,11 @@ Due problemi, non uno:
 
 ### 10b. Dataset sostituito con uno più vecchio
 
-Il file `graph_data_enriched.json` c'è, ma è stato **sostituito** con uno diverso e meno aggiornato (una release precedente, un backup, un dataset preso da un altro punto della cronologia del progetto), lasciando intatto `backend/.state/` prodotto da un run più recente. Qui l'arricchimento rete/working group degli RFC pubblicati resta veloce (guarda il contenuto del dataset presente, già risolto), ma i draft hanno lo stesso identico problema del punto 10a: `last_draft_fetch_iso` è più recente della data del dataset "vecchio", quindi i draft nella finestra intermedia non vengono mai ripescati.
+Il file `graph_data_enriched.json` c'è, ma è stato **sostituito** con uno diverso e meno aggiornato (una release precedente, un backup, un dataset preso da un altro punto della cronologia del progetto), lasciando intatto `backend/.state/` prodotto da un run più recente. Qui l'arricchimento rete/working group degli RFC pubblicati resta veloce (guarda il contenuto del dataset presente, già risolto), ma i draft hanno lo stesso identico problema del punto 10a: `last_draft_fetch_iso` è più recente della data del dataset "vecchio", quindi i draft nella finestra intermedia non vengono mai ripescati — un buco silenzioso, senza errori né avvisi.
 
 ### 10c. Perché cancellare solo `.state/` non basta, e come risolvere davvero
 
-Cancellare `backend/.state/` azzera `last_draft_fetch_iso`, quindi la query dei draft torna a essere una scansione completa — "tutti i draft", senza filtro temporale — identica a quella di un vero primo run (§9). Il problema: **quella identica query è già stata eseguita in passato**, e la sua risposta è ancora su disco in `backend/.cache/datatracker/`, cache che per design (§2, §8) non scade mai. Lo script *crede* di fare una scansione fresca, ma la serve dalla cache — la fotografia di Datatracker del primo fetch, non quella di oggi. Ogni draft creato, scaduto o diventato RFC dopo quel primo fetch resta invisibile: un buco silenzioso, senza errori né avvisi.
+Cancellare `backend/.state/` azzera `last_draft_fetch_iso`, quindi la query dei draft torna a essere una scansione completa — "tutti i draft", senza filtro temporale — identica a quella di un vero primo run (§9). Il problema: **quella identica query è già stata eseguita in passato**, e la sua risposta è ancora su disco in `backend/.cache/datatracker/`, cache che per design (§2, §8) non scade mai. Lo script *crede* di fare una scansione fresca, ma la serve dalla cache — la fotografia di Datatracker del primo fetch, non quella di oggi. Ogni draft creato, scaduto o diventato RFC dopo quel primo fetch resta invisibile, senza errori né avvisi.
 
 > [!IMPORTANT]
 > Il rischio è **specifico a 10a e 10b**, non generico a tutta la cache: nell'aggiornamento incrementale normale `last_draft_fetch_iso` cambia a ogni run → query diversa → cache miss garantito; nel vero primo run (§9) non esiste ancora nessuna cache vecchia da leggere per errore. Riguarda solo, in pratica, chi cancella `.state/` su una macchina che ha già fatto almeno una scansione completa in passato — cioè 10a/10b.
@@ -425,6 +430,6 @@ Vale anche se il dataset è stato sostituito con uno **più recente** (es. relea
 Situazione diversa dal §10, anche se solo all'apparenza simile: il dataset è presente (scaricato dalla [release](https://github.com/ilMassy/RFC-graph-visualizer/releases/tag/dataset-v2) o preso da un'altra run/macchina, non generato localmente), ma `backend/.state` e `backend/.cache` sono **entrambi assenti**, perché la pipeline non ha mai girato su questa macchina. Passare da `npx ng build` a `npm run build` in questa condizione:
 
 - **non riproduce il bug del §10c** — la cache è vuota, non vecchia: non c'è nulla di stantio da servire, la scansione è reale e fresca;
-- **ma resta comunque una scansione completa dei draft**, non incrementale (manca `last_draft_fetch_iso`): con ~35.000 Internet-Draft su Datatracker e paginazione a 50 elementi, sono circa 700 pagine in più — qualche minuto, secondo latenza e throttling di rete, sommato al costo del ricontrollo draft del §11a. Non è comunque il tempo di un vero primo run (§9): gli RFC restano veloci, già risolti nel dataset scaricato.
+- **ma resta comunque una scansione completa dei draft**, non incrementale (manca `last_draft_fetch_iso`): considerando la presenza di circa 35.000 Internet-Draft all'interno del Datatracker e una paginazione impostata a 50 elementi per pagina, la pipeline processerà complessivamente circa 700 pagine; dipendendo principalmente dalla latenza e dal throttling delle richieste di rete, il tempo di esecuzione aggiuntivo stimato si attesta nell'ordine di qualche minuto in più rispetto al caso normale (§11a) — che a sua volta, per il ricontrollo dei draft attivi appena descritto, non è già di per sé un caso rapido — non certo il tempo di un vero primo run (§9), perché gli RFC restano veloci (già risolti nel dataset scaricato, `enrich` li salta).
 
 Dopo questa prima esecuzione locale, `.state`/`.cache` vengono creati: i run successivi si comportano come il caso normale (§11a).
