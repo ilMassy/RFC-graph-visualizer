@@ -91,7 +91,7 @@ npm run build     # oppure: npm start
 
 Gli RFC già risolti vengono saltati; i draft attivi/scaduti già nel dataset vengono invece sempre ririnterrogati uno per uno (per accorgersi se sono diventati RFC o sono stati abbandonati) — il tempo cresce quindi con quanti draft attivi sono già tracciati, non solo con le novità.
 
-Vale anche se il dataset è stato sostituito con uno **più recente**: nessun rischio, è l'opposto del §5. Dettagli → [guida operativa §11a](docs/guida-operativa-backend.md#11a-aggiornamento-normale).
+Vale anche se il dataset è stato sostituito con uno **più recente**: nessun rischio, è l'opposto del §5. Dettagli → [guida operativa §11a](docs/guida-operativa-backend.md#11-casi-senza-rischi).
 
 ### 4. 🐢 Pipeline dati (repository nuovo o dataset assente)
 
