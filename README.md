@@ -45,7 +45,7 @@ Progetto svolto in collaborazione con il gruppo di ricerca di Reti di Calcolator
 > `graph_data.json` è solo output intermedio della fase `parse` ([guida operativa §1](docs/guida-operativa-backend.md#1-fase-parse)): se lo tieni in giro, deve essere della stessa run di `graph_data_enriched.json`, altrimenti dati vecchi restano congelati senza errori né avvisi. Nel dubbio, non tenerlo — viene rigenerato da solo.
 
 > [!WARNING]
-> Rilancia solo dopo un run precedente concluso per intero (non un `kill -9` o un crash). In caso contrario, prima di rilanciare — **sempre dentro `backend/`**: `rm -rf .state/ .cache/datatracker/` — dettagli → [guida operativa §8](docs/guida-operativa-backend.md#8-pulizia-tra-un-test-e-laltro).
+> Rilancia solo dopo un run precedente concluso per intero. In caso contrario, prima di rilanciare — **sempre dentro `backend/`**: `rm -rf .state/ .cache/datatracker/` — dettagli → [guida operativa §8](docs/guida-operativa-backend.md#8-pulizia-tra-un-test-e-laltro).
 
 | Situazione | Comando | Tempo |
 |---|---|---|
